@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"అనుమతి అవసరం"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"టెర్మినల్ సరిగ్గా పని చేయడానికి కింది అనుమతులు అవసరం: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"కింది అనుమతులు లేవు. దయచేసి వాటిని సెట్టింగ్‌లలో మంజూరు చేయండి: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"సమీపంలోని డివైజ్‌ల అనుమతి అవసరం"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"టెర్మినల్ సరిగ్గా పని చేయడానికి, దానికి సమీపంలోని డివైజ్‌ల అనుమతి అవసరం."</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux టెర్మినల్‌ను ఇన్‌స్టాల్ చేయండి"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux టెర్మినల్‌ను లాంచ్ చేయడానికి, మీరు నెట్‌వర్క్ ద్వారా దాదాపు <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> డేటాను డౌన్‌లోడ్ చేసుకోవాలి.\nమీరు కొనసాగించాలనుకుంటున్నారా?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Wi-Fiని ఉపయోగించి మాత్రమే డౌన్‌లోడ్ చేయండి"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"సిస్టమ్ ఈవెంట్‌లు"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux టెర్మినల్ ఇన్‌స్టాల్ అవుతోంది"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"ఇన్‌స్టాలేషన్ పూర్తయిన తర్వాత Linux టెర్మినల్ ప్రారంభమవుతుంది"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"కొత్త పోర్ట్‌ను తెరవడానికి టెర్మినల్ రిక్వెస్ట్ చేస్తోంది"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"రిక్వెస్ట్ చేసిన పోర్ట్: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"కొత్త పోర్ట్ ఓపెన్ అయింది"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> పోర్ట్ (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) ఇప్పుడు ఓపెన్ అయి ఉంది. ఫార్వర్డింగ్‌ను అనుమతించాలా?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"ఆమోదించండి"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"తిరస్కరించండి"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"రీట్రై చేయండి"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"టెర్మినల్ స్టేటస్"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"యాక్టివ్‌గానే ఉంచండి"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"పోర్ట్ ఫార్వర్డింగ్"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"టెర్మినల్ ఇన్‌స్టాల్ అవుతోంది"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"టెర్మినల్ ప్రారంభమవుతోంది"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"టెర్మినల్ రన్ అవుతోంది"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"టెర్మినల్ షట్ డౌన్ అవుతోంది"</string>
     <string name="settings_title" msgid="3035373808103055663">"సెట్టింగ్‌లు"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"వెనుకకు"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"అడ్వాన్స్‌డ్"</string>

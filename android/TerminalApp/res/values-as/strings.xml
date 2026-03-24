@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"অনুমতিৰ প্ৰয়োজন"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"টাৰ্মিনেলক সঠিকভাৱে কাম কৰিবলৈ তলত উল্লেখিত অনুমতিসমূহৰ প্ৰয়োজন: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"তলত দিয়া অনুমতিসমূহ নাই। অনুগ্ৰহ কৰি ছেটিঙত সেইসমূহ প্ৰদান কৰক: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"নিকটৱৰ্তী ডিভাইচৰ বাবে অনুমতিৰ আৱশ্যক"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"টাৰ্মিনেলক সঠিকভাৱে কাম কৰিবলৈ নিকটৱৰ্তী ডিভাইচৰ অনুমতিৰ আৱশ্যক।"</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux টাৰ্মিনেল ইনষ্টল কৰক"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux টাৰ্মিনেল লঞ্চ কৰিবলৈ, আপুনি নেটৱৰ্কত প্ৰায় <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ডেটা ডাউনল’ড কৰিব লাগিব।\nআপুনি আগবাঢ়িবনে?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"কেৱল ৱাই-ফাই ব্যৱহাৰ কৰি ডাউনল’ড কৰক"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"ছিষ্টেমৰ ঘটনা"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux টাৰ্মিনেল ইনষ্টল কৰি থকা হৈছে"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"Linux টাৰ্মিনেল ইনষ্টলেশ্বন সম্পূৰ্ণ হোৱাৰ পাছত আৰম্ভ হ\'ব"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"টাৰ্মিনেলটোৱে এটা নতুন প’ৰ্ট খুলিবলৈ অনুৰোধ কৰি আছে"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"প’ৰ্ট অনুৰোধ কৰা হৈছে: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"নতুন প’ৰ্ট খোলা হৈছে"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"প’ৰ্ট <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) এতিয়া খোলা আছে। ফৰৱাৰ্ড কৰাৰ অনুমতি দিব নেকি?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"গ্ৰহণ কৰক"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"অস্বীকাৰ কৰক"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"পুনৰ চেষ্টা কৰক"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"টাৰ্মিনেলৰ স্থিতি"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"সক্ৰিয় কৰি ৰাখক"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"প’ৰ্ট ফৰৱাৰ্ডিং"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"টাৰ্মিনেল ইনষ্টল কৰি থকা হৈছে"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"টাৰ্মিনেল ষ্টাৰ্ট কৰি থকা হৈছে"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"টাৰ্মিনেলটো চলি আছে"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"টাৰ্মিনেলটো শ্বাট ডাউন কৰি থকা হৈছে"</string>
     <string name="settings_title" msgid="3035373808103055663">"ছেটিং"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"উভতি যাওক"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"উচ্চখাপৰ"</string>

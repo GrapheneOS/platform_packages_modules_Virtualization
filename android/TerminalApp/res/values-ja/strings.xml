@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"権限が必要です"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"ターミナルを正しく動作させるには、<xliff:g id="PERMISSION_LIST">%s</xliff:g>の権限が必要です"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"必要な権限がありません。[設定] で<xliff:g id="PERMISSION_LIST">%s</xliff:g>の権限を付与してください"</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"「付近のデバイス」権限が必要です"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"ターミナルを正しく動作させるには、「付近のデバイス」権限が必要です。"</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux ターミナルのインストール"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux ターミナルを起動するには、ネットワーク経由で約 <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> のデータのダウンロードが必要です。\n続行しますか？"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Wi-Fi 使用時にのみダウンロードする"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"システム イベント"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux ターミナルをインストールしています"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"インストールが完了すると Linux ターミナルが起動します"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"ターミナルが新しいポートを開くリクエストをしました"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"リクエストされたポート: <xliff:g id="PORT_NUMBER">%1$d</xliff:g>（<xliff:g id="PROCESS_NAME">%2$s</xliff:g>）"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"新しいポートが開きました"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"ポート <xliff:g id="PORT_NUMBER">%1$d</xliff:g>（<xliff:g id="PROCESS_NAME">%2$s</xliff:g>）が開きました。転送を許可しますか？"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"許可"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"許可しない"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"再試行"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"ターミナルのステータス"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"スリープモードにしない"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"ポート転送"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"ターミナルをインストールしています"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"ターミナルを起動しています"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"ターミナルは実行中です"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"ターミナルをシャットダウンしています"</string>
     <string name="settings_title" msgid="3035373808103055663">"設定"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"戻る"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"詳細設定"</string>

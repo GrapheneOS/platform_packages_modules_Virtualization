@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"Kebenaran Diperlukan"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"Terminal memerlukan kebenaran yang berikut untuk berfungsi dengan betul: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Kebenaran yang berikut tiada. Sila berikan kebenaran dalam Tetapan: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"Kebenaran Peranti berdekatan Diperlukan"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"Terminal memerlukan kebenaran Peranti berdekatan untuk berfungsi dengan betul."</string>
     <string name="installer_title" msgid="1318592751395646215">"Pasang terminal Linux"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Untuk melancarkan terminal Linux, anda perlu memuat turun kira-kira <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> data melalui rangkaian.\nAdakah anda mahu meneruskan proses?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Muat turun menggunakan Wi-Fi sahaja"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"Peristiwa sistem"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Memasang terminal Linux"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"Terminal Linux akan dimulakan selepas pemasangan selesai"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"Terminal membuat permintaan untuk membuka port baharu"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"Port diminta: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"Port Baharu Dibuka"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"Kini port <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) dibuka. Benarkan pemajuan?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"Terima"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"Tolak"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"Cuba semula"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"Status Terminal"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"Kekal Berjaga"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"Pemajuan Port"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"Terminal sedang dipasang"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"Terminal sedang dimulakan"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"Terminal sedang dijalankan"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"Terminal sedang dimatikan"</string>
     <string name="settings_title" msgid="3035373808103055663">"Tetapan"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Kembali"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Lanjutan"</string>

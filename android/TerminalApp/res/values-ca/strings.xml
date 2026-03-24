@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"Es necessita permís"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"El terminal necessita els permisos següents per funcionar correctament: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Falten els permisos següents. Concedeix-los a Configuració: <xliff:g id="PERMISSION_LIST">%s</xliff:g>."</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"Es necessita el permís per accedir a dispositius propers"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"Per funcionar correctament, el terminal necessita el permís per accedir a dispositius propers."</string>
     <string name="installer_title" msgid="1318592751395646215">"Instal·la el terminal de Linux"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Per iniciar el terminal de Linux, has de baixar uns <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> de dades a través de la xarxa.\nVols continuar?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Baixa només mitjançant la Wi‑Fi"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"Esdeveniments del sistema"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"S\'està instal·lant el terminal de Linux"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"El terminal de Linux s\'iniciarà quan hagi acabat la instal·lació"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"El terminal està sol·licitant obrir un port nou"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"Port sol·licitat: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"S\'ha obert un port nou"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"El port <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) ara està obert. Vols permetre la redirecció?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"Accepta"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"Denega"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"Prova-ho de nou"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"Estat del terminal"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"Mantén actiu"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"Redirecció de ports"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"El terminal s\'està instal·lant"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"El terminal s\'està iniciant"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"El terminal s\'està executant"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"El terminal s\'està apagant"</string>
     <string name="settings_title" msgid="3035373808103055663">"Configuració"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Enrere"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Configuració avançada"</string>

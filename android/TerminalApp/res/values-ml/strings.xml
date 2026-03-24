@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"അനുമതി ആവശ്യമാണ്"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"ശരിയായി പ്രവർത്തിക്കാൻ ടെർമിനലിന് ഇനിപ്പറയുന്ന അനുമതികൾ ആവശ്യമാണ്: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"ഇനിപ്പറയുന്ന അനുമതികൾ നൽകിയിട്ടില്ല. ക്രമീകരണത്തിൽ അവ അനുവദിക്കുക: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"സമീപമുള്ള ഉപകരണങ്ങൾക്കുള്ള അനുമതി ആവശ്യമാണ്"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"ശരിയായി പ്രവർത്തിക്കാൻ ടെർമിനലിന് സമീപമുള്ള ഉപകരണങ്ങൾക്കുള്ള അനുമതി ആവശ്യമാണ്."</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux ടെർമിനൽ ഇൻസ്റ്റാൾ ചെയ്യുക"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux ടെർമിനൽ ലോഞ്ച് ചെയ്യാൻ, നിങ്ങൾക്ക് നെറ്റ്‌വർക്കിലൂടെ ഏകദേശം <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> ഡാറ്റ ഡൗൺലോഡ് ചെയ്യേണ്ടതുണ്ട്.\nനിങ്ങൾക്ക് തുടരണമെന്നുണ്ടോ?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"വൈഫൈ മാത്രം ഉപയോഗിച്ച് ഡൗൺലോഡ് ചെയ്യുക"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"സിസ്റ്റം ഇവന്റുകൾ"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux ടെർമിനൽ ഇൻസ്റ്റാൾ ചെയ്യുന്നു"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"ഇൻസ്റ്റലേഷൻ പൂർത്തിയായതിന് ശേഷം Linux ടെർമിനൽ ആരംഭിക്കും"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"ടെർമിനൽ ഒരു പുതിയ പോർട്ട് തുറക്കാൻ അഭ്യർത്ഥിക്കുന്നു"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"അഭ്യർത്ഥിച്ച പോർട്ട്: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"പുതിയ പോർട്ട് തുറന്നു"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"പോർട്ട് <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) ഇപ്പോൾ തുറന്നിരിക്കുന്നു. ഫോർവേഡ് ചെയ്യാൻ അനുവദിക്കണോ?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"അംഗീകരിക്കുക"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"നിരസിക്കുക"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"വീണ്ടും നോക്കൂ"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"ടെർമിനൽ നില"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"സജീവമാക്കി നിലനിർത്തുക"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"പോർട്ട് ഫോർവേഡിങ്"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"ടെർമിനൽ ഇൻസ്റ്റാൾ ചെയ്യുന്നു"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"ടെർമിനൽ ആരംഭിക്കുന്നു"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"ടെർമിനൽ റൺ ചെയ്യുന്നു"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"ടെർമിനൽ ഷട്ട് ഡൗൺ ചെയ്യുന്നു"</string>
     <string name="settings_title" msgid="3035373808103055663">"ക്രമീകരണം"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"മടങ്ങുക"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"വിപുലമായത്"</string>
