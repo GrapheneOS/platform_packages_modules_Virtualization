@@ -20,16 +20,6 @@
       }
     },
     {
-      "package": "apex",
-      "name": "com.android.virt",
-      "min_version": 1,
-      "expected_authority": {
-        "dev-keys": "a279d6d530ae0cea2b2f2c1d3dee1e5b59dbdac861e137995eaf44b1a57c5cfb02b7892f00e7fe647756fd2cfef66e74350b517c4d79463c6e6a6f96eb01693b",
-        "test-keys": "a279d6d530ae0cea2b2f2c1d3dee1e5b59dbdac861e137995eaf44b1a57c5cfb02b7892f00e7fe647756fd2cfef66e74350b517c4d79463c6e6a6f96eb01693b",
-        "release-keys": "1a54c4ac5df6040d452106b811e0f4dc967fb19f324b355488555f754e46af51bd1187f114219ff72269ee892986adfa6eba0e3a5bda6bced8b6a7ca430c1ae0"
-      }
-    },
-    {
       "package": "apk",
       "name": "com.android.microdroid.test_alternate_tenant",
       "min_version": 36,
