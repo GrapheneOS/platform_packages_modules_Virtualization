@@ -25,15 +25,15 @@ import java.io.IOException;
 public class PvmfwTool {
     public static void printUsage() {
         System.out.println("pvmfw-tool: Appends pvmfw.bin and config payloads.");
-        System.out.println("            Requires BCC. VM Reference DT, VM DTBO, and Debug policy");
-        System.out.println("            can optionally be specified");
+        System.out.println("            Requires BCC. VM Reference DT, VM DTBO, Debug policy,");
+        System.out.println("            and reserved memory config can optionally be specified");
         System.out.println(
                 "Usage: pvmfw-tool <out> <pvmfw.bin> <dice.dat> [VM reference DT] [VM DTBO] [debug"
-                        + " policy]");
+                        + " policy] [reserved memory]");
     }
 
     public static void main(String[] args) {
-        if (args.length < 3 || args.length > 6) {
+        if (args.length < 3 || args.length > 7) {
             printUsage();
             System.exit(1);
         }
@@ -45,6 +45,7 @@ public class PvmfwTool {
         File vmReferenceDt = null;
         File vmDtbo = null;
         File dp = null;
+        File rmem = null;
         if (args.length > 3) {
             vmReferenceDt = new File(args[3]);
         }
@@ -54,17 +55,23 @@ public class PvmfwTool {
         if (args.length > 5) {
             dp = new File(args[5]);
         }
+        if (args.length > 6) {
+            rmem = new File(args[6]);
+        }
 
         try {
             Pvmfw.Builder builder =
                     new Pvmfw.Builder(pvmfwBin, bccData)
                             .setVmReferenceDt(vmReferenceDt)
                             .setDebugPolicyOverlay(dp)
+                            .setRmem(rmem)
                             .setVmDtbo(vmDtbo);
-            if (vmReferenceDt == null) {
-                builder.setVersion(1, 1);
-            } else {
+            if (rmem != null) {
+                builder.setVersion(1, 3);
+            } else if (vmReferenceDt != null) {
                 builder.setVersion(1, 2);
+            } else {
+                builder.setVersion(1, 1);
             }
 
             Pvmfw pvmfw = builder.build();
