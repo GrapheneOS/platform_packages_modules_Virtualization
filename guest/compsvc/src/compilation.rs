@@ -68,9 +68,7 @@ use authfs_aidl_interface::aidl::com::android::virt::fs::{
 use compos_aidl_interface::aidl::com::android::compos::ICompOsService::{
     CompilationMode::CompilationMode, OdrefreshArgs::OdrefreshArgs,
 };
-use compos_aidl_interface::aidl::com::android::compos::IVerifiedDex2OatService::{
-    Dex2OatArg::Dex2OatArg, FileDetails::FileDetails,
-};
+use compos_aidl_interface::aidl::com::android::compos::IVerifiedDex2OatService::Dex2OatArg::Dex2OatArg;
 use compos_aidl_interface::aidl::com::android::compos::IVerifiedDex2OatTaskCallback::{
     Dex2OatExitCode::Dex2OatExitCode, Dex2OatSetupFailure::Dex2OatSetupFailure,
     Dex2OatSignal::Dex2OatSignal, GuestDex2OatMetrics::GuestDex2OatMetrics,
@@ -130,7 +128,8 @@ fn get_input_dir_fd_annotations(
     if system_ext_dir_fd >= 0 {
         input_dir_fd_annotations.push(InputDirFdAnnotation {
             fd: system_ext_dir_fd,
-            // Use the 1st APK of the extra_apks in compos/apk/assets/vm_config_system_ext_*.json
+            // Use the 1st APK of the extra_apks in
+            // compos/apk/assets/vm_config_system_ext_*.json
             manifestPath: "/mnt/extra-apk/1/assets/build_manifest.pb".to_string(),
             prefix: "system_ext/".to_string(),
         });
@@ -306,50 +305,23 @@ impl std::fmt::Display for FdError {
 }
 impl std::error::Error for FdError {}
 
-fn file_details_to_owned_fds(
-    file_details: &Vec<FileDetails>,
-    mountpoint: &Path,
-) -> Result<(Vec<(OwnedFd, Option<String>)>, Vec<RawFd>), FdError> {
-    let mut owned_fds: Vec<(OwnedFd, /* verity_digest= */ Option<String>)> = Vec::new();
-    let mut raw_keep_fds: Vec<RawFd> = Vec::new();
-    for file_detail in file_details {
-        let mut verity_digest: Option<String> = None;
-        let path = mountpoint.join(file_detail.fd.to_string());
-        // RW files will never have verity digests available.
-        let open_result = if file_detail.isRw {
-            OpenOptions::new().read(true).write(true).truncate(true).open(&path)
-        } else {
-            // RO files optionally have verity digests.
-            if !file_detail.verityDigest.is_empty() {
-                verity_digest = Some(file_detail.verityDigest.clone());
-            }
-            OpenOptions::new().read(true).open(&path)
-        };
-        let file = match open_result {
-            Ok(file) => file,
-            Err(e) => {
-                return Err(FdError {
-                    message: format!(
-                        "failed to open {}, rw={}, os_error {}",
-                        path.display(),
-                        file_detail.isRw,
-                        e
-                    ),
-                    fds: vec![file_detail.fd],
-                });
-            }
-        };
-        raw_keep_fds.push(file.as_raw_fd());
-        owned_fds.push((file.into(), verity_digest));
-    }
-    Ok((owned_fds, raw_keep_fds))
+#[derive(Debug)]
+struct OpenedFds {
+    pub fd: OwnedFd,
+    pub is_rw: bool,
+}
+#[derive(Debug)]
+struct ManifestCompilerArg {
+    pub cmdline_arg: String,   // dex2oat cmdline arg
+    pub arg: CompilerArgument, // CompilerArgument proto
+    pub fds: Vec<OpenedFds>,   // Details about the open fds associated with this arg.
 }
 
-fn binder_arg_to_cmdline_arg(
+fn populate_cmdline_arg_with_fds(
     dex2oat_arg: &Dex2OatArg,
-    owned_fds: &[(OwnedFd, /* verity_digest= */ Option<String>)],
+    opened_fds: &[OpenedFds],
 ) -> Result<String> {
-    let mut fds_iter = owned_fds.iter();
+    let mut fds_iter = opened_fds.iter();
     let mut cmdline_arg: String = String::new();
     let mut is_escaped = false;
 
@@ -368,8 +340,8 @@ fn binder_arg_to_cmdline_arg(
         } else if cur_char == '\\' {
             is_escaped = true;
         } else if cur_char == '!' {
-            if let Some((owned_fd, _)) = fds_iter.next() {
-                cmdline_arg.push_str(&owned_fd.as_raw_fd().to_string());
+            if let Some(compiled_fd) = fds_iter.next() {
+                cmdline_arg.push_str(&compiled_fd.fd.as_raw_fd().to_string());
             } else {
                 return Err(anyhow!(
                     "Mismatch between count of placeholders (!) and fds:formatString={}",
@@ -384,6 +356,78 @@ fn binder_arg_to_cmdline_arg(
         cmdline_arg.push('\\');
     }
     Ok(cmdline_arg)
+}
+
+fn prepare_manifest_args(
+    args: &[Dex2OatArg],
+    mountpoint: &Path,
+) -> Result<(Vec<ManifestCompilerArg>, Vec<RawFd>), FdError> {
+    let mut manifest_args: Vec<ManifestCompilerArg> = Vec::new();
+    let mut raw_keep_fds: Vec<RawFd> = Vec::new();
+
+    for arg in args {
+        let mut opened_fds: Vec<OpenedFds> = Vec::new();
+        let mut proto_file_details = Vec::new();
+
+        for file_detail in &arg.fds {
+            let mut verity_digest: Option<String> = None;
+            let path = mountpoint.join(file_detail.fd.to_string());
+            // RW files will never have verity digests available.
+            let open_result = if file_detail.isRw {
+                OpenOptions::new().read(true).write(true).truncate(true).open(&path)
+            } else {
+                // RO files optionally have verity digests.
+                if !file_detail.verityDigest.is_empty() {
+                    verity_digest = Some(file_detail.verityDigest.clone());
+                }
+                OpenOptions::new().read(true).open(&path)
+            };
+            let file = match open_result {
+                Ok(file) => file,
+                Err(e) => {
+                    return Err(FdError {
+                        message: format!(
+                            "failed to open {}, rw={}, os_error {}",
+                            path.display(),
+                            file_detail.isRw,
+                            e
+                        ),
+                        fds: vec![file_detail.fd],
+                    });
+                }
+            };
+
+            raw_keep_fds.push(file.as_raw_fd());
+            let owned_fd: OwnedFd = file.into();
+
+            let mut proto_detail = ProtoFileDetails::new();
+            proto_detail.verity_digest = verity_digest;
+            proto_file_details.push(proto_detail);
+
+            opened_fds.push(OpenedFds { fd: owned_fd, is_rw: file_detail.isRw });
+        }
+
+        let cmdline_arg = match populate_cmdline_arg_with_fds(arg, &opened_fds) {
+            Ok(c) => c,
+            Err(e) => {
+                return Err(FdError {
+                    message: format!(
+                        "Failed to build dex2oat arg for format {}: {:#}",
+                        arg.formatString, e
+                    ),
+                    fds: vec![],
+                });
+            }
+        };
+
+        let mut compiler_arg = CompilerArgument::new();
+        compiler_arg.compiler_flag = Some(arg.formatString.clone());
+        compiler_arg.file_info = proto_file_details;
+
+        manifest_args.push(ManifestCompilerArg { cmdline_arg, arg: compiler_arg, fds: opened_fds });
+    }
+
+    Ok((manifest_args, raw_keep_fds))
 }
 
 // For a given pid open a pid fd and wait for it to become readable. This should happen when the
@@ -420,40 +464,43 @@ fn get_pid_cpu_time_ms(pid: i32) -> Result<i32> {
     Ok((total_cpu_ticks * 1000 / clock_ticks_per_second()).try_into()?)
 }
 
-fn record_manifest(
-    mut secure_compile_manifest: SecureCompileManifest,
-    manifest_path: &Path,
-    details: Vec<Vec<(OwnedFd, Option<String>)>>,
-) -> Result<()> {
-    // Compilation is done, record verity digests for all files.
-    // owned_fds is constructed in such a way that each entry is a vector
-    // of fds that correspond to a compiler arg.
-    for (arg, fds) in secure_compile_manifest.compiler_arguments.iter_mut().zip(details) {
-        for (fd, digest_option) in fds {
-            let mut file_detail = ProtoFileDetails::new();
-            file_detail.verity_digest = if digest_option.is_some() {
-                match fsverity::measure(fd.as_fd()) {
-                    Ok(sha256) => {
-                        let sha256_str = hex::encode(sha256);
-                        Some(format!("sha256-{}", sha256_str))
-                    }
-                    Err(e) => {
-                        // This shouldn't happen.
-                        // If there is a digest in file details that means authfs was provided with
-                        // a digest when mounting the file.
-                        // If we got this far this means that the file was also successfully read
-                        // and used by dex2oat and so the digest is valid.
-                        // Getting here implies that the underlying authfs implementation that
-                        // handles verity measurement is broken.
-                        bail!("verity measure failed for fd={}:{:?}", fd.as_raw_fd(), e);
-                    }
+fn fill_rw_verity_digests(manifest_args: &mut Vec<ManifestCompilerArg>) -> Result<()> {
+    for manifest_arg in manifest_args {
+        if manifest_arg.fds.len() != manifest_arg.arg.file_info.len() {
+            // This should never happen.
+            // The number of fds should always match the number of file infos.
+            bail!(
+                "Mismatch between number of fds and file infos for compiler flag: {:?}",
+                manifest_arg.arg.compiler_flag
+            );
+        }
+        for (opened_fd_info, file_info) in
+            manifest_arg.fds.iter().zip(manifest_arg.arg.file_info.iter_mut())
+        {
+            if opened_fd_info.is_rw {
+                // The fd is rw, we measure the verity now after compilation has
+                // finished.
+                if let Ok(digest) = fsverity::measure(opened_fd_info.fd.as_fd()) {
+                    file_info.verity_digest = Some(format!("sha256-{}", hex::encode(digest)));
+                } else {
+                    // This should never happen.
+                    // Measuring the verity on a rw file should always succeed.
+                    bail!(
+                        "Failed to measure rw fd {} for compiler flag: {:?}",
+                        opened_fd_info.fd.as_raw_fd(),
+                        manifest_arg.arg.compiler_flag
+                    );
                 }
-            } else {
-                None
-            };
-            arg.file_info.push(file_detail);
+            }
         }
     }
+    Ok(())
+}
+
+fn record_manifest(manifest_args: Vec<ManifestCompilerArg>, manifest_path: &Path) -> Result<()> {
+    let mut secure_compile_manifest = SecureCompileManifest::new();
+    // Compilation is done, record verity digests for all files.
+    secure_compile_manifest.compiler_arguments.extend(manifest_args.into_iter().map(|m| m.arg));
     let secure_compile_manifest_sha256: [u8; 32] = {
         let secure_compile_manifest_bytes = match secure_compile_manifest.write_to_bytes() {
             Ok(b) => b,
@@ -534,6 +581,11 @@ pub fn run_dex2oat(
                         fd: file_details.fd,
                         digest: file_details.verityDigest.clone(),
                     });
+                    info!(
+                        "fd {} mounted with digest {}",
+                        file_details.fd,
+                        file_details.verityDigest.clone()
+                    );
                 }
             }
         }
@@ -593,45 +645,20 @@ pub fn run_dex2oat(
         }
 
         let mut cmdline_args: Vec<String> = vec!["dex2oat64".to_string()];
-        let mut owned_fds: Vec<Vec<(OwnedFd, Option<String>)>> = Vec::new();
-        let mut raw_keep_fds: Vec<RawFd> = Vec::new();
-        let mut secure_compile_manifest = SecureCompileManifest::new();
-        // Go through each dex2oat binder arg and transform it into a vector of
-        // strings suitable for running the dex2oat command line.
-        for arg in &dex2oat_binder_args {
-            let mut recorded_arg = CompilerArgument::new();
-            recorded_arg.compiler_flag = Some(arg.formatString.clone());
-            // If there are file descriptors attached, open them and positionally
-            // replace the '!' in the format string with the raw fd value.
-            if !arg.fds.is_empty() {
-                // Transform fds into a list of file details
-                let result = file_details_to_owned_fds(&arg.fds, &mountpoint);
-                if let Err(e) = result {
-                    report_setup_failure(&callback, format!("Failed to open fds: {:#}", e), e.fds);
-                    return;
-                }
-                let (cur_owned_fds, mut cur_raw_keep_fds) = result.unwrap();
 
-                let format_str_result = binder_arg_to_cmdline_arg(arg, &cur_owned_fds);
-                if let Err(e) = format_str_result {
-                    report_setup_failure(
-                        &callback,
-                        format!("Failed to build dex2oat args: {:#}", e),
-                        vec![],
-                    );
-                    return;
-                }
-                let format_str = format_str_result.unwrap();
-                secure_compile_manifest.compiler_arguments.push(recorded_arg);
-                cmdline_args.push(format_str);
-                owned_fds.push(cur_owned_fds);
-                raw_keep_fds.append(&mut cur_raw_keep_fds);
-            } else {
-                // no fds.
-                secure_compile_manifest.compiler_arguments.push(recorded_arg);
-                cmdline_args.push(arg.formatString.clone());
-                owned_fds.push(vec![]);
-            }
+        let result = prepare_manifest_args(&dex2oat_binder_args, &mountpoint);
+        if let Err(e) = result {
+            report_setup_failure(
+                &callback,
+                format!("Failed to open fds or build args: {:#}", e),
+                e.fds,
+            );
+            return;
+        }
+        let (mut manifest_args, raw_keep_fds) = result.unwrap();
+
+        for arg in &manifest_args {
+            cmdline_args.push(arg.cmdline_arg.clone());
         }
 
         info!(
@@ -649,7 +676,8 @@ pub fn run_dex2oat(
             Ok(j) => j,
             Err(e) => {
                 let err_msg = format!("Failed to spawn dex2oat, path={}, args={:?}, env_vars={:?}, kept_fds={:?}: {:#}",
-                dex2oat_path.display(), cmdline_args, env_vars, raw_keep_fds, e);
+                                                   dex2oat_path.display(), cmdline_args, env_vars,
+                                                   raw_keep_fds, e);
                 report_setup_failure(&callback, err_msg, vec![]);
                 return;
             }
@@ -692,7 +720,10 @@ pub fn run_dex2oat(
         }
 
         let manifest_path = mountpoint.join(manifest_fd.to_string());
-        if let Err(e) = record_manifest(secure_compile_manifest, &manifest_path, owned_fds) {
+        if let Err(e) = fill_rw_verity_digests(&mut manifest_args) {
+            error!("Failed to fill the verity digests of rw files {:?}", e);
+        }
+        if let Err(e) = record_manifest(manifest_args, &manifest_path) {
             error!("Failed to record manifest: {:?}", e);
         }
 
@@ -729,6 +760,7 @@ mod test {
         IAuthFsService::MockIAuthFsService,
     };
     use binder::{BinderFeatures, Strong};
+    use compos_aidl_interface::aidl::com::android::compos::IVerifiedDex2OatService::FileDetails::FileDetails;
     use compos_aidl_interface::aidl::com::android::compos::IVerifiedDex2OatTaskCallback::{
         BnVerifiedDex2OatTaskCallback, IVerifiedDex2OatTaskCallback,
         MockIVerifiedDex2OatTaskCallback,
@@ -765,72 +797,72 @@ mod test {
     }
 
     #[test]
-    fn test_binder_arg_to_cmdline_arg_simple_substitution() {
+    fn test_populate_cmdline_arg_with_fds_simple_substitution() {
         let arg = Dex2OatArg { formatString: "--input-fd=!".to_string(), fds: vec![] };
         let fd1 = create_mock_owned_fd();
         let fd1_raw = fd1.as_raw_fd();
-        let owned_fds = vec![(fd1, None)];
+        let owned_fds = vec![OpenedFds { fd: fd1, is_rw: false }];
 
-        let result = binder_arg_to_cmdline_arg(&arg, &owned_fds).unwrap();
+        let result = populate_cmdline_arg_with_fds(&arg, &owned_fds).unwrap();
         assert_eq!(result, format!("--input-fd={}", fd1_raw));
     }
 
     #[test]
-    fn test_binder_arg_to_cmdline_arg_multiple_substitutions() {
+    fn test_populate_cmdline_arg_with_fds_multiple_substitutions() {
         let arg = Dex2OatArg { formatString: "--fds=!,!".to_string(), fds: vec![] };
         let fd1 = create_mock_owned_fd();
         let fd2 = create_mock_owned_fd();
         let fd1_raw = fd1.as_raw_fd();
         let fd2_raw = fd2.as_raw_fd();
-        let owned_fds = vec![(fd1, None), (fd2, None)];
+        let owned_fds =
+            vec![OpenedFds { fd: fd1, is_rw: false }, OpenedFds { fd: fd2, is_rw: false }];
 
-        let result = binder_arg_to_cmdline_arg(&arg, &owned_fds).unwrap();
+        let result = populate_cmdline_arg_with_fds(&arg, &owned_fds).unwrap();
         assert_eq!(result, format!("--fds={},{}", fd1_raw, fd2_raw));
     }
 
     #[test]
-    fn test_binder_arg_to_cmdline_arg_escaped_placeholder() {
-        let arg = Dex2OatArg { formatString: r#"--not-a-placeholder=\!"#.to_string(), fds: vec![] };
+    fn test_populate_cmdline_arg_with_fds_escaped_placeholder() {
+        let arg = Dex2OatArg { formatString: r"--not-a-placeholder=\!".to_string(), fds: vec![] };
         let owned_fds = vec![];
 
-        let result = binder_arg_to_cmdline_arg(&arg, &owned_fds).unwrap();
+        let result = populate_cmdline_arg_with_fds(&arg, &owned_fds).unwrap();
         assert_eq!(result, "--not-a-placeholder=!");
     }
 
     #[test]
-    fn test_binder_arg_to_cmdline_arg_escaped_escape() {
-        let arg = Dex2OatArg { formatString: r#"--path=\\!"#.to_string(), fds: vec![] };
+    fn test_populate_cmdline_arg_with_fds_escaped_escape() {
+        let arg = Dex2OatArg { formatString: r"--path=\\!".to_string(), fds: vec![] };
         let fd1 = create_mock_owned_fd();
         let fd1_raw = fd1.as_raw_fd();
-        let owned_fds = vec![(fd1, None)];
+        let owned_fds = vec![OpenedFds { fd: fd1, is_rw: false }];
 
-        let result = binder_arg_to_cmdline_arg(&arg, &owned_fds).unwrap();
+        let result = populate_cmdline_arg_with_fds(&arg, &owned_fds).unwrap();
         // \\ -> \
         // ! -> fd1_raw
         assert_eq!(result, format!("--path=\\{}", fd1_raw));
     }
 
     #[test]
-    fn test_binder_arg_to_cmdline_arg_other_escape() {
-        let arg = Dex2OatArg { formatString: r#"--misc=\n"#.to_string(), fds: vec![] };
+    fn test_populate_cmdline_arg_with_fds_other_escape() {
+        let arg = Dex2OatArg { formatString: "--misc=\n".to_string(), fds: vec![] };
         let owned_fds = vec![];
-
-        let result = binder_arg_to_cmdline_arg(&arg, &owned_fds).unwrap();
-        assert_eq!(result, r#"--misc=\n"#);
+        let result = populate_cmdline_arg_with_fds(&arg, &owned_fds).unwrap();
+        assert_eq!(result, "--misc=\n");
     }
 
     #[test]
-    fn test_binder_arg_to_cmdline_arg_mismatch_error() {
+    fn test_populate_cmdline_arg_with_fds_mismatch_error() {
         let arg = Dex2OatArg { formatString: "--input-fd=!".to_string(), fds: vec![] };
         let owned_fds = vec![];
 
-        let result = binder_arg_to_cmdline_arg(&arg, &owned_fds);
+        let result = populate_cmdline_arg_with_fds(&arg, &owned_fds);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Mismatch"));
     }
 
     #[test]
-    fn test_file_details_to_owned_fds_success() {
+    fn test_prepare_manifest_args_success() {
         let temp_dir = tempdir().unwrap();
         let mountpoint = temp_dir.path();
 
@@ -839,32 +871,41 @@ mod test {
         fs::write(&fd1_path, "ro data").unwrap();
         fs::write(&fd2_path, "rw data").unwrap();
 
-        let file_details = vec![
-            FileDetails { fd: 10, isRw: false, verityDigest: "digest".to_string() },
-            FileDetails { fd: 11, isRw: true, verityDigest: "".to_string() },
-        ];
+        let dex2oat_args = vec![Dex2OatArg {
+            formatString: "--fds=!,!".to_string(),
+            fds: vec![
+                FileDetails { fd: 10, isRw: false, verityDigest: "digest".to_string() },
+                FileDetails { fd: 11, isRw: true, verityDigest: "".to_string() },
+            ],
+        }];
 
-        let (owned_fds, raw_keep_fds) =
-            file_details_to_owned_fds(&file_details, mountpoint).unwrap();
+        let (manifest_args, raw_keep_fds) =
+            prepare_manifest_args(&dex2oat_args, mountpoint).unwrap();
 
-        assert_eq!(owned_fds.len(), 2);
+        assert_eq!(manifest_args.len(), 1);
+        assert_eq!(manifest_args[0].fds.len(), 2);
         assert_eq!(raw_keep_fds.len(), 2);
 
         // Verify RO file
-        assert_eq!(owned_fds[0].1, Some("digest".to_string()));
+        assert_eq!(manifest_args[0].arg.file_info[0].verity_digest, Some("digest".to_string()));
+        assert!(!manifest_args[0].fds[0].is_rw);
 
         // Verify RW file
-        assert_eq!(owned_fds[1].1, None);
+        assert_eq!(manifest_args[0].arg.file_info[1].verity_digest, None);
+        assert!(manifest_args[0].fds[1].is_rw);
     }
 
     #[test]
-    fn test_file_details_to_owned_fds_missing_file() {
+    fn test_prepare_manifest_args_missing_file() {
         let temp_dir = tempdir().unwrap();
         let mountpoint = temp_dir.path();
 
-        let file_details = vec![FileDetails { fd: 12, isRw: false, verityDigest: "".to_string() }];
+        let dex2oat_args = vec![Dex2OatArg {
+            formatString: "--fds=!".to_string(),
+            fds: vec![FileDetails { fd: 12, isRw: false, verityDigest: "".to_string() }],
+        }];
 
-        let result = file_details_to_owned_fds(&file_details, mountpoint);
+        let result = prepare_manifest_args(&dex2oat_args, mountpoint);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.message.contains("failed to open"));
@@ -1130,13 +1171,16 @@ mod test {
         assert_eq!(manifest.compiler_arguments[1].file_info.len(), 1);
         assert!(manifest.compiler_arguments[1].file_info[0].verity_digest.is_none());
 
-        // Check third arg: --oat-fd=!, one fd, no verity (RW)
+        // Check third arg: --oat-fd=!, one fd, WITH verity (RW)
         assert_eq!(
             manifest.compiler_arguments[2].compiler_flag,
             Some(args[2].formatString.clone())
         );
         assert_eq!(manifest.compiler_arguments[2].file_info.len(), 1);
-        assert!(manifest.compiler_arguments[2].file_info[0].verity_digest.is_none());
+        assert_eq!(
+            manifest.compiler_arguments[2].file_info[0].verity_digest,
+            Some(format!("sha256-{}", hex::encode(FD_RO_DIGEST_SHA256)))
+        );
 
         // Check fourth arg: --input-vdex-fd=!, one fd, WITH verity
         assert_eq!(
@@ -1189,25 +1233,125 @@ mod test {
     }
 
     #[test]
-    fn test_dex2oat_binder_arg_to_cmdline_arg_complex_string() {
+    fn test_populate_cmdline_arg_with_fds_complex_string() {
         let arg =
             Dex2OatArg { formatString: r#"! --path=\! --another=!"#.to_string(), fds: vec![] };
         let fd1 = create_mock_owned_fd();
         let fd2 = create_mock_owned_fd();
         let fd1_raw = fd1.as_raw_fd();
         let fd2_raw = fd2.as_raw_fd();
-        let owned_fds = vec![(fd1, None), (fd2, None)];
+        let owned_fds =
+            vec![OpenedFds { fd: fd1, is_rw: false }, OpenedFds { fd: fd2, is_rw: false }];
 
-        let result = binder_arg_to_cmdline_arg(&arg, &owned_fds).unwrap();
+        let result = populate_cmdline_arg_with_fds(&arg, &owned_fds).unwrap();
         assert_eq!(result, format!("{} --path=! --another={}", fd1_raw, fd2_raw));
     }
 
     #[test]
-    fn test_dex2oat_binder_arg_to_cmdline_arg_doubly_escaped_placeholder() {
+    fn test_populate_cmdline_arg_with_fds_doubly_escaped_placeholder() {
         let arg = Dex2OatArg { formatString: r#"--path=\\\!"#.to_string(), fds: vec![] };
-        let owned_fds = vec![];
+        let owned_fds: Vec<OpenedFds> = vec![];
 
-        let result = binder_arg_to_cmdline_arg(&arg, &owned_fds).unwrap();
+        let result = populate_cmdline_arg_with_fds(&arg, &owned_fds).unwrap();
         assert_eq!(result, r#"--path=\!"#);
+    }
+
+    #[test]
+    fn test_record_manifest() {
+        let temp_dir = tempdir().unwrap();
+        let manifest_path = temp_dir.path().join("manifest.pb");
+        fs::File::create(&manifest_path).unwrap();
+
+        let mut compiler_arg1 = CompilerArgument::new();
+        compiler_arg1.compiler_flag = Some("--flag1".to_string());
+        let manifest_arg1 = ManifestCompilerArg {
+            cmdline_arg: "cmd1".to_string(),
+            arg: compiler_arg1,
+            fds: vec![],
+        };
+
+        let mut compiler_arg2 = CompilerArgument::new();
+        compiler_arg2.compiler_flag = Some("--flag2".to_string());
+        let mut file_info1 = ProtoFileDetails::new();
+        file_info1.verity_digest = Some("digest1".to_string());
+        let mut file_info2 = ProtoFileDetails::new();
+        file_info2.verity_digest = Some("digest2".to_string());
+        compiler_arg2.file_info = vec![file_info1, file_info2];
+        let manifest_arg2 = ManifestCompilerArg {
+            cmdline_arg: "cmd2".to_string(),
+            arg: compiler_arg2,
+            fds: vec![],
+        };
+
+        let signature_bytes = b"fake_signature_bytes".to_vec();
+        let signature_bytes_clone = signature_bytes.clone();
+        let _sign_ctx = {
+            let ctx = crate::compos_key::mock_wrapper::sign_context();
+            ctx.expect().times(1).return_once(move |_| Ok(signature_bytes_clone));
+            ctx
+        };
+
+        assert!(record_manifest(vec![manifest_arg1, manifest_arg2], &manifest_path).is_ok());
+
+        let manifest_bytes = fs::read(&manifest_path).expect("Failed to read manifest");
+        let signature =
+            Signature::parse_from_bytes(&manifest_bytes).expect("Failed to parse signature");
+        let signed_manifest = signature.compos_signed_manifest();
+
+        assert_eq!(signed_manifest.signature.as_ref().unwrap(), &signature_bytes);
+        assert_eq!(
+            signed_manifest.algorithm.unwrap().enum_value().unwrap(),
+            SignatureAlgorithm::ED25519
+        );
+        let manifest = signed_manifest.manifest.as_ref().expect("Missing manifest");
+        assert_eq!(manifest.compiler_arguments.len(), 2);
+        assert_eq!(manifest.compiler_arguments[0].compiler_flag.as_ref().unwrap(), "--flag1");
+        assert!(manifest.compiler_arguments[0].file_info.is_empty());
+
+        assert_eq!(manifest.compiler_arguments[1].compiler_flag.as_ref().unwrap(), "--flag2");
+        assert_eq!(manifest.compiler_arguments[1].file_info.len(), 2);
+        assert_eq!(
+            manifest.compiler_arguments[1].file_info[0].verity_digest.as_ref().unwrap(),
+            "digest1"
+        );
+        assert_eq!(
+            manifest.compiler_arguments[1].file_info[1].verity_digest.as_ref().unwrap(),
+            "digest2"
+        );
+    }
+
+    #[test]
+    fn test_fill_rw_verity_digests() {
+        let fd_rw = create_mock_owned_fd();
+        let fd_ro = create_mock_owned_fd();
+
+        let fds = vec![OpenedFds { fd: fd_rw, is_rw: true }, OpenedFds { fd: fd_ro, is_rw: false }];
+
+        let proto_detail_rw = ProtoFileDetails::new();
+        let mut proto_detail_ro = ProtoFileDetails::new();
+        proto_detail_ro.verity_digest = Some("original_ro_digest".to_string());
+
+        let mut compiler_arg = CompilerArgument::new();
+        compiler_arg.compiler_flag = Some("--test-flag".to_string());
+        compiler_arg.file_info = vec![proto_detail_rw, proto_detail_ro];
+
+        let manifest_arg =
+            ManifestCompilerArg { cmdline_arg: "--test-flag".to_string(), arg: compiler_arg, fds };
+
+        let mut manifest_args = vec![manifest_arg];
+
+        let _fsverity_ctx = {
+            let ctx = fsverity::measure_context();
+            ctx.expect().once().returning(|_| Ok([0xaa; 32]));
+            ctx
+        };
+
+        assert!(fill_rw_verity_digests(&mut manifest_args).is_ok());
+
+        let rw_digest = &manifest_args[0].arg.file_info[0].verity_digest;
+        assert_eq!(rw_digest.as_ref().unwrap(), &format!("sha256-{}", hex::encode([0xaa; 32])));
+
+        let ro_digest = &manifest_args[0].arg.file_info[1].verity_digest;
+        assert_eq!(ro_digest.as_ref().unwrap(), "original_ro_digest");
     }
 }
