@@ -601,18 +601,18 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
         }
     }
 
-    private Double getDmesgBootTime() throws Exception {
+    private Double getBootTime() throws Exception {
 
         CommandRunner android = new CommandRunner(getDevice());
-        String result = android.run("dmesg");
-        Pattern pattern = Pattern.compile("\\[(.*)].*sys.boot_completed=1.*");
-        for (String line : result.split("[\r\n]+")) {
-            Matcher matcher = pattern.matcher(line);
-            if (matcher.find()) {
-                return Double.valueOf(matcher.group(1));
-            }
+        String result = android.run("bootstat -p | grep -w 'boot_complete'");
+        String[] bootTime = result.split("\\s+");
+        if (bootTime.length > 1) {
+            Double bootTimeInSeconds = (Double.parseDouble(bootTime[1])) / 1000.0;
+            CLog.d("Boot time: " + bootTimeInSeconds);
+            return bootTimeInSeconds;
+        } else {
+            throw new IllegalArgumentException("Failed to get boot time info.");
         }
-        throw new IllegalArgumentException("Failed to get boot time info.");
     }
 
     private void composTestHelper(boolean isWithCompos, String osKey) throws Exception {
@@ -640,7 +640,7 @@ public final class AVFHostTestCase extends MicrodroidHostTestCaseBase {
                 waitForBootCompleted();
             }
 
-            double elapsedSec = getDmesgBootTime();
+            double elapsedSec = getBootTime();
             bootDmesgTime.add(elapsedSec);
         }
 
