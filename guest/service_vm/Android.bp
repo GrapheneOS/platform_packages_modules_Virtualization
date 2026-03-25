@@ -129,7 +129,6 @@ rust_test {
     data: [
         ":service_vm_unsigned",
         ":test_rkp_cert_chain",
-        "tests/testdata/protected_uds_certs.cbor",
     ],
     test_suites: ["general-tests"],
     enabled: false,
