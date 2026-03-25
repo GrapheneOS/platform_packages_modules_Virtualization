@@ -117,8 +117,15 @@ func (c *cidataIsoPackage) GenerateAndroidBuildActions(ctx android.ModuleContext
 
 	rootDir := c.properties.Root_dir
 	rootDirPath := android.PathForModuleSrc(ctx, rootDir)
-	rootDirNodes := filepath.Join(rootDirPath.String(), "*")
-	rootDirAllFiles := ctx.GlobFiles(filepath.Join(rootDirPath.String(), "**/*"), nil)
+	rootDirNodes := rootDirPath.String() + "/."
+
+	// Soong's GlobFiles does not include hidden files/directories (starting with '.') by default.
+	// We need to explicitly glob for them. Also, the build system does not allow multiple '**'
+	// in a single pattern (e.g. '**/.*/**/*'), so we specify depths explicitly to cover
+	// cases like 'root_files/home/droid/.config/weston.ini'.
+	var rootDirAllFiles android.Paths
+	rootDirAllFiles = append(rootDirAllFiles, ctx.GlobFiles(filepath.Join(rootDirPath.String(), "**/*"), nil)...)
+	rootDirAllFiles = append(rootDirAllFiles, ctx.GlobFiles(filepath.Join(rootDirPath.String(), "**/.*/*"), nil)...)
 
 	builder.Command().Text("cp").
 		Flag("-R").
