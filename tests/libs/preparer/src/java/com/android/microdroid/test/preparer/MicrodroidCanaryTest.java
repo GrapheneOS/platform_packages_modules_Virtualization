@@ -52,7 +52,7 @@ public class MicrodroidCanaryTest extends BaseTargetPreparer {
 
     private String getPathForPayloadPackage(TestDevice device) throws DeviceNotAvailableException {
         for (String apk : DEFAULT_PAYLOAD_APKS) {
-            String cmd = "pm path " + apk;
+            String cmd = "pm path --user 0 " + apk;
             CommandResult result = device.executeShellV2Command(cmd);
             if (result.getStatus() != CommandStatus.SUCCESS) {
                 continue;
