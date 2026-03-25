@@ -223,7 +223,7 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
                         .setMemoryBytes(minMemoryRequired())
                         .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
                         .build();
-        final int NUMBER_OF_TENANTS_IN_CONFIG = 3;
+        final int NUMBER_OF_TENANTS_IN_CONFIG = 2;
         VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_tenant_uids", config);
         CompletableFuture<Exception> exception = new CompletableFuture<>();
         CompletableFuture<Integer> exitCodeFuture = new CompletableFuture<>();
@@ -867,10 +867,11 @@ public class VmMultiTenancyTests extends MicrodroidDeviceTestBase {
                         .setDebugLevel(VirtualMachineConfig.DEBUG_LEVEL_FULL)
                         .build();
 
-        assertThrowsVmException(
-                () -> tryBootVmWithConfig(config, "test_vm_main_and_tenant_tasks"),
-                VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED,
-                "Both main task and tenant task are present");
+        VirtualMachine vm = forceCreateNewVirtualMachine("test_vm_main_and_tenant_tasks", config);
+        BootResult bootResult = tryBootVm(TAG, vm);
+        assertThat(bootResult.payloadStarted).isFalse();
+        assertThat(bootResult.deathReason)
+                .isEqualTo(VirtualMachineCallback.STOP_REASON_MICRODROID_INVALID_PAYLOAD_CONFIG);
     }
 
     private CompletableFuture<String> readTenantPackagesMounted(VirtualMachine vm)

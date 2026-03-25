@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"ଅନୁମତି ଆବଶ୍ୟକ"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"ସଠିକ ଭାବେ କାର୍ଯ୍ୟ କରିବା ପାଇଁ ଟର୍ମିନାଲ ନିମ୍ନୋକ୍ତ ଅନୁମତିଗୁଡ଼ିକ ଆବଶ୍ୟକ କରେ: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"ନିମ୍ନୋକ୍ତ ଅନୁମତିଗୁଡ଼ିକ ଉପଲବ୍ଧ ନାହିଁ। ଦୟାକରି ସେଟିଂସରେ ସେଗୁଡ଼ିକୁ ଅନୁମତି ଦିଅନ୍ତୁ: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"ଆଖପାଖର ଡିଭାଇସଗୁଡ଼ିକ ପାଇଁ ଅନୁମତି ଆବଶ୍ୟକ"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"ସଠିକ ଭାବେ କାର୍ଯ୍ୟ କରିବା ପାଇଁ ଟର୍ମିନାଲ ଆଖପାଖର ଡିଭାଇସଗୁଡ଼ିକର ଅନୁମତି ଆବଶ୍ୟକ କରେ।"</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux ଟର୍ମିନାଲକୁ ଇନଷ୍ଟଲ କରନ୍ତୁ"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux ଟର୍ମିନାଲ ଲଞ୍ଚ କରିବାକୁ ଆପଣଙ୍କୁ ନେଟୱାର୍କ ମାଧ୍ୟମରେ ପ୍ରାୟ <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g>ର ଡାଟା ଡାଉନଲୋଡ କରିବାକୁ ହେବ।\nଆପଣ ଆଗକୁ ବଢ଼ିବା ପାଇଁ ଚାହିଁବେ?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"କେବଳ ୱାଇ-ଫାଇ ବ୍ୟବହାର କରି ଡାଉନଲୋଡ କରନ୍ତୁ"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"ସିଷ୍ଟମ ଇଭେଣ୍ଟ"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux ଟର୍ମିନାଲକୁ ଇନଷ୍ଟଲ କରାଯାଉଛି"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"ଇନଷ୍ଟଲେସନ ସମ୍ପୂର୍ଣ୍ଣ ହେବା ପରେ Linux ଟର୍ମିନାଲ ଷ୍ଟାର୍ଟ ହେବ"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"ଏକ ନୂଆ ପୋର୍ଟ ଖୋଲିବାକୁ ଟର୍ମିନାଲ ଅନୁରୋଧ କରୁଛି"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"ପୋର୍ଟ ପାଇଁ ଅନୁରୋଧ କରାଯାଇଛି: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"ନୂଆ ପୋର୍ଟ ଖୋଲାଯାଇଛି"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"ପୋର୍ଟ <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) ବର୍ତ୍ତମାନ ଖୋଲା ଅଛି। ଫରୱାର୍ଡିଂ ପାଇଁ ଅନୁମତି ଦେବେ?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"ଗ୍ରହଣ କରନ୍ତୁ"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"ଅଗ୍ରାହ୍ୟ କରନ୍ତୁ"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"ପୁଣି ଚେଷ୍ଟା କର"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"ଟର୍ମିନାଲ ସ୍ଥିତି"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"ସକ୍ରିୟ ରଖନ୍ତୁ"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"ପୋର୍ଟ ଫରୱାର୍ଡିଂ"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"Terminal ଇନଷ୍ଟଲ ହେଉଛି"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"ଟର୍ମିନାଲ ଆରମ୍ଭ ହେଉଛି"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"Terminal ଚାଲୁ ଅଛି"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"ଟର୍ମିନାଲ ବନ୍ଦ ହେଉଛି"</string>
     <string name="settings_title" msgid="3035373808103055663">"ସେଟିଂସ"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"ପଛକୁ ଫେରନ୍ତୁ"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"ଉନ୍ନତ"</string>

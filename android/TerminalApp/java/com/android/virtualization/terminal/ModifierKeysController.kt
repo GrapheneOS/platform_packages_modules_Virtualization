@@ -16,6 +16,7 @@
 package com.android.virtualization.terminal
 
 import android.content.res.Configuration
+import android.view.Display
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -109,11 +110,16 @@ class ModifierKeysController(val activity: MainActivity, val parent: ViewGroup) 
         }
     }
 
-    // Modifier keys are required only when IME is shown and the HW qwerty keyboard is not present
-    private fun needToShowKeys(): Boolean =
-        activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) &&
+    // Modifier keys are required only when IME is shown and the HW qwerty keyboard is not present.
+    // However, on external displays (e.g., desktop mode), the IME might not show automatically,
+    // so we show modifier keys even if the IME is hidden if it's an external display.
+    private fun needToShowKeys(): Boolean {
+        val isExternalDisplay = activity.display?.displayId != Display.DEFAULT_DISPLAY
+        return (activity.window.decorView.rootWindowInsets.isVisible(WindowInsets.Type.ime()) ||
+            isExternalDisplay) &&
             activeTerminalView!!.hasFocus() &&
             !(activity.resources.configuration.keyboard == Configuration.KEYBOARD_QWERTY)
+    }
 
     // If terminal's height including height of modifier keys is less than 40% of the screen
     // height, we need to show modifier keys in a single line to save the vertical space

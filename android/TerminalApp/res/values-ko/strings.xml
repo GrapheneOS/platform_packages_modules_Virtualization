@@ -21,6 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"권한 필요"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"터미널이 제대로 작동하려면 <xliff:g id="PERMISSION_LIST">%s</xliff:g> 권한이 필요합니다."</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"다음 권한이 없습니다. 설정에서 <xliff:g id="PERMISSION_LIST">%s</xliff:g> 권한을 부여하세요."</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"근처 기기 권한 필요"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"터미널이 제대로 작동하려면 근처 기기 권한이 필요합니다."</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux 터미널 설치"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux 터미널을 실행하려면 네트워크를 통해 약 <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g>의 데이터를 다운로드해야 합니다.\n계속하시겠습니까?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Wi-Fi를 통해서만 다운로드"</string>
@@ -77,11 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"시스템 이벤트"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux 터미널 설치 중"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"설치가 완료되면 Linux 터미널이 시작됩니다"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"터미널에서 새 포트를 열려고 합니다"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"요청된 포트: <xliff:g id="PORT_NUMBER">%1$d</xliff:g>(<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <string name="notif_port_title_request" msgid="7779691701150579835">"새 포트가 열림"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"이제 <xliff:g id="PORT_NUMBER">%1$d</xliff:g> 포트(<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)가 열렸습니다. 전달을 허용하시겠습니까?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"수락"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"거부"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"다시 시도"</string>
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"터미널 상태"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"켜진 상태로 유지"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"포트 전달"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"터미널 설치 중"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"터미널 시작 중"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"터미널 실행 중"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"터미널 종료 중"</string>
     <string name="settings_title" msgid="3035373808103055663">"설정"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"뒤로"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"고급"</string>

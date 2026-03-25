@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration description="Runs Microdroid VM multitenancy tests (VTS).">
+    <option name="config-descriptor:metadata" key="component" value="security" />
+    <option name="config-descriptor:metadata" key="parameter" value="not_instant_app" />
+    <option name="config-descriptor:metadata" key="parameter" value="not_multi_abi" />
+    <option name="config-descriptor:metadata" key="parameter" value="secondary_user" />
+
+    <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
+        <option name="test-file-name" value="{MODULE}.apk" />
+        <option name="test-file-name" value="MicrodroidTestApp.VTS.apk" />
+        <option name="test-file-name" value="MicrodroidTestHelperAppAlternateTenant.apk" />
+    </target_preparer>
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="run-command" value="mkdir -p /data/local/tmp/cts/microdroid_multitenancy" />
+        <option name="teardown-command" value="rm -rf /data/local/tmp/cts/microdroid_multitenancy" />
+    </target_preparer>
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.FilePusher">
+        <option name="cleanup" value="true" />
+        <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V6.apk" />
+        <option name="push" value="MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk->/data/local/tmp/cts/microdroid/MicrodroidTestHelperAppRelaxedRollbackProtection_V7_inc_rollback_version.apk" />
+    </target_preparer>
+    <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
+        <option name="package" value="com.android.virt.vm_multitenancy.testapp" />
+        <option name="runner" value="androidx.test.runner.AndroidJUnitRunner" />
+        <option name="shell-timeout" value="300000" />
+        <option name="test-timeout" value="300000" />
+    </test>
+
+    {EXTRA_CONFIGS}
+</configuration>

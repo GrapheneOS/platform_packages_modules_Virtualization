@@ -21,6 +21,10 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"İzin Gerekli"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"Terminalin doğru çalışması için şu izinler gerekir: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Aşağıdaki izinler eksik. Lütfen Ayarlar\'da izin verin: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
+    <!-- no translation found for permission_screen_title_required_nearby_devices (4359578610884771259) -->
+    <skip />
+    <!-- no translation found for permission_screen_message_required_nearby_devices (3325660162281238504) -->
+    <skip />
     <string name="installer_title" msgid="1318592751395646215">"Linux terminalini yükleyin"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux terminalini başlatmak için ağ üzerinden yaklaşık <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> veri indirmeniz gerekir.\nDevam etmek istiyor musunuz?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Yalnızca kablosuz bağlantıyla indir"</string>
@@ -77,11 +81,27 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"Sistem etkinlikleri"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux terminali yükleniyor"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"Linux terminali, yükleme işlemi tamamlandıktan sonra başlatılacak"</string>
-    <string name="notif_port_title_request" msgid="5905756814363533807">"Terminal yeni bir bağlantı noktası açmak istiyor"</string>
-    <string name="notif_port_content_request" msgid="1467194001950592265">"İstenilen bağlantı noktası: <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>)"</string>
+    <!-- no translation found for notif_port_title_request (7779691701150579835) -->
+    <skip />
+    <!-- no translation found for notif_port_content_request (5762561378331864279) -->
+    <skip />
     <string name="notif_port_action_accept" msgid="3820564627354207468">"Kabul et"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"Reddet"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"Yeniden dene"</string>
+    <!-- no translation found for notif_terminal_status_channel_id (1354694854639584368) -->
+    <skip />
+    <!-- no translation found for notif_keep_awake_channel_id (5299581301990946341) -->
+    <skip />
+    <!-- no translation found for notif_port_forwarding_channel_id (1711769547950910898) -->
+    <skip />
+    <!-- no translation found for notif_terminal_app_status_installing_content (7152102758294473183) -->
+    <skip />
+    <!-- no translation found for notif_terminal_app_status_starting_content (2984219358045243153) -->
+    <skip />
+    <!-- no translation found for notif_terminal_app_status_running_content (2841714963415326151) -->
+    <skip />
+    <!-- no translation found for notif_terminal_app_status_shutting_down_content (6324214533238993691) -->
+    <skip />
     <string name="settings_title" msgid="3035373808103055663">"Ayarlar"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Geri"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Gelişmiş"</string>
