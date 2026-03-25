@@ -14,4 +14,5 @@
  * limitations under the License.
  */
 
+#include "verified_dex2oat/manifest_verification.h"
 #include "verified_dex2oat/verified_dex2oat_compilation.h"

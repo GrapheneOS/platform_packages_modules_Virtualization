@@ -173,12 +173,17 @@ internal class ImageArchive {
                             trySend(bytes)
                         }
 
+                    var hasGrpcCidata = false
                     TarArchiveInputStream(GzipCompressorInputStream(countingStream)).use { tarStream
                         ->
                         Files.createDirectories(dir)
                         var entry: ArchiveEntry?
                         while ((tarStream.nextEntry.also { entry = it }) != null) {
-                            val to = dir.resolve(entry!!.getName())
+                            val name = entry!!.getName()
+                            if (name == CIDATA_NAME) {
+                                hasGrpcCidata = true
+                            }
+                            val to = dir.resolve(name)
                             if (Files.isDirectory(to)) {
                                 Files.createDirectories(to)
                                 continue
@@ -199,13 +204,16 @@ internal class ImageArchive {
                         // agent.
                         val cidataBuildIdPath = dir.resolve(InstalledImage.CIDATA_BUILD_ID_FILENAME)
                         cidataBuildIdPath.writeText("dev")
+                    } else if (hasGrpcCidata) {
+                        // Something went bad, and we need to revert to use cidata.iso inside
+                        // images.tar.gz. Remove marker here.
+                        val cidataBuildId = dir.resolve(InstalledImage.CIDATA_BUILD_ID_FILENAME)
+                        Files.deleteIfExists(cidataBuildId)
                     } else {
                         val installedCidata = dir.resolve(CIDATA_NAME)
-                        if (!installedCidata.exists()) {
-                            Log.d(TAG, "Installing bundled cidata.iso")
-                            copyAsset(context, CIDATA_NAME, dir)
-                            copyAsset(context, InstalledImage.CIDATA_BUILD_ID_FILENAME, dir)
-                        }
+                        Log.d(TAG, "Installing bundled cidata.iso")
+                        copyAsset(context, CIDATA_NAME, dir)
+                        copyAsset(context, InstalledImage.CIDATA_BUILD_ID_FILENAME, dir)
                     }
 
                     commitInstallationAt(dir)

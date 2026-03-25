@@ -16,7 +16,7 @@
 <configuration description="Runs Trusty VM benchmarks.">
     <option name="config-descriptor:metadata" key="component" value="security" />
     <target_preparer class="com.android.tradefed.targetprep.suite.SuiteApkInstaller">
-        <option name="test-file-name" value="TrustyBenchmarks.apk" />
+        <option name="test-file-name" value="TrustyVmBenchmarks.apk" />
     </target_preparer>
     <!-- Need root to access /proc/$pid/smaps when measuring memory usage. -->
     <target_preparer class="com.android.tradefed.targetprep.RootTargetPreparer">
@@ -32,7 +32,7 @@
             value="trusty_security_vm.elf->/data/local/tmp/trusty_vm/trusty_security_vm.elf" />
     </target_preparer>
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
-        <option name="package" value="com.android.trusty_vm.benchmark" />
+        <option name="package" value="com.android.trusty.vm.benchmarks" />
         <option name="runner" value="androidx.test.runner.AndroidJUnitRunner" />
         <option name="shell-timeout" value="180000" />
         <option name="test-timeout" value="180000" />

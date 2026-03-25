@@ -27,3 +27,24 @@ cc_test {
         ":TestAppForCompilation",
     ],
 }
+
+cc_test {
+    name: "manifest_verification_api_test",
+    srcs: ["manifest_verification_api_test.cc"],
+    static_libs: [
+        "libcom_android_compos_ffi_c",
+        "libgtest",
+        "libfsverity",
+        "libcompos_manifest_proto_cc",
+    ],
+    shared_libs: [
+        "libprotobuf-cpp-full",
+        "libcrypto",
+        "libbase",
+        "liblog",
+    ],
+    test_suites: [
+        "general-tests",
+    ],
+    test_config: "manifest_verification_api_test.xml",
+}

@@ -27,6 +27,7 @@ import java.io.BufferedReader
 import java.io.FileReader
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -136,16 +137,33 @@ public class InstalledImage private constructor(val installDir: Path) {
         }
     }
 
-    fun isCompatible(): Boolean {
+    fun isCompatible(context: Context): Boolean {
         if (Files.exists(java.nio.file.Paths.get("/sdcard/linux/force_upgrade"))) {
+            Log.d(TAG, "Terminal image would be forcefully upgraded")
             return false
         }
         val info = buildInfo ?: return false
-        return info.timestamp.year >= RELEASE_YEAR
-    }
-
-    fun isOlderThanCurrentVersion(): Boolean {
-        return !isCompatible()
+        if (info.timestamp.year < RELEASE_YEAR) {
+            Log.d(TAG, "Base image is outdated")
+            return false
+        }
+        if (cidataBuildId == null) {
+            Log.d(TAG, "cidata.iso is outdated. Should use bundled cidata.iso")
+            return false
+        }
+        if (cidataBuildId == "dev") {
+            Log.d(TAG, "Upgrade is disabled for dev image")
+            return true
+        }
+        val bundledCidataBuildId =
+            context.assets.open(CIDATA_BUILD_ID_FILENAME).use {
+                String(it.readBytes(), StandardCharsets.UTF_8)
+            }
+        if (cidataBuildId != "dev" && cidataBuildId != bundledCidataBuildId) {
+            Log.d(TAG, "cidata.iso is outdated")
+            return false
+        }
+        return true
     }
 
     @Throws(IOException::class)
@@ -274,7 +292,7 @@ public class InstalledImage private constructor(val installDir: Path) {
         const val MARKER_FILENAME: String = "completed"
 
         const val RESIZE_STEP_BYTES: Long = 4 shl 20 // 4 MiB
-        const val RELEASE_YEAR: Int = 2025
+        const val RELEASE_YEAR: Int = 2026
 
         /** Returns InstalledImage for a given app context */
         fun getDefault(context: Context): InstalledImage {
