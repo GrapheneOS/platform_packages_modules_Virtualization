@@ -354,7 +354,11 @@ mod tests {
         let json_str = r#"{
             "package": "apk",
             "name": "com.test.apk",
-            "expected_authority": "some_authority"
+            "expected_authority": {
+                "dev-keys": "some_authority",
+                "test-keys": "some_authority",
+                "release-keys": "some_authority"
+            }
         }"#;
 
         let result: Result<TenantConfig, _> = serde_json::from_str(json_str);

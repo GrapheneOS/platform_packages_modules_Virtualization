@@ -21,10 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"يجب الحصول على إذن"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"يحتاج تطبيق Terminal إلى الأذونات التالية لكي يعمل بشكل سليم: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"الأذونات التالية غير متوفّرة. يُرجى منحها في \"الإعدادات\": <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
-    <!-- no translation found for permission_screen_title_required_nearby_devices (4359578610884771259) -->
-    <skip />
-    <!-- no translation found for permission_screen_message_required_nearby_devices (3325660162281238504) -->
-    <skip />
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"يجب منح إذن \"الأجهزة المجاورة\""</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"يحتاج تطبيق Terminal إلى إذن \"الأجهزة المجاورة\" لكي يعمل بشكل صحيح."</string>
     <string name="installer_title" msgid="1318592751395646215">"تثبيت Terminal بنظام التشغيل Linux"</string>
     <string name="installer_desc" msgid="3104802716504777741">"لتشغيل تطبيق Terminal باستخدام نظام التشغيل Linux، عليك تنزيل <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> من البيانات تقريبًا عبر الشبكة.\nالمتابعة؟"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"التنزيل باستخدام Wi-Fi فقط"</string>
@@ -81,27 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"أحداث النظام"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"جارٍ تثبيت Terminal بنظام التشغيل Linux"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"سيتم تشغيل Terminal بنظام التشغيل Linux بعد اكتمال عملية التثبيت"</string>
-    <!-- no translation found for notif_port_title_request (7779691701150579835) -->
-    <skip />
-    <!-- no translation found for notif_port_content_request (5762561378331864279) -->
-    <skip />
+    <string name="notif_port_title_request" msgid="7779691701150579835">"تم فتح منفذ جديد"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"تم فتح المنفذ <xliff:g id="PORT_NUMBER">%1$d</xliff:g>‏ (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) الآن. السماح بإعادة التوجيه؟"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"قبول"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"رفض"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"إعادة المحاولة"</string>
-    <!-- no translation found for notif_terminal_status_channel_id (1354694854639584368) -->
-    <skip />
-    <!-- no translation found for notif_keep_awake_channel_id (5299581301990946341) -->
-    <skip />
-    <!-- no translation found for notif_port_forwarding_channel_id (1711769547950910898) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_installing_content (7152102758294473183) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_starting_content (2984219358045243153) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_running_content (2841714963415326151) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_shutting_down_content (6324214533238993691) -->
-    <skip />
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"حالة تطبيق Terminal"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"البقاء في الوضع النشط"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"إعادة توجيه المنفذ"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"جارٍ تثبيت Terminal"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"جارٍ بدء تشغيل Terminal"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"تطبيق Terminal قيد التشغيل"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"جارٍ إيقاف Terminal"</string>
     <string name="settings_title" msgid="3035373808103055663">"الإعدادات"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"رجوع"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"إعدادات متقدّمة"</string>

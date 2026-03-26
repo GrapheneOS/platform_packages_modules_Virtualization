@@ -21,10 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"Toestemming word vereis"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"Terminaal vereis die volgende toestemmings om reg te werk: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Die volgende toestemmings ontbreek. Verleen dit in Instellings: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
-    <!-- no translation found for permission_screen_title_required_nearby_devices (4359578610884771259) -->
-    <skip />
-    <!-- no translation found for permission_screen_message_required_nearby_devices (3325660162281238504) -->
-    <skip />
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"Toestelle in die Omtrek-toestemming word vereis"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"Terminaal vereis Toestelle in die Omtrek-toestemming om reg te werk."</string>
     <string name="installer_title" msgid="1318592751395646215">"Installeer Linux-terminaal"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Jy sal omtrent <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> se data oor die netwerk moet aflaai om Linux-terminaal te begin.\nWil jy voortgaan?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Laai net oor wi-fi af"</string>
@@ -81,27 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"Stelselgevalle"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Installeer tans Linux-terminaal"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"Linux-terminaal sal begin nadat die installasie voltooi is"</string>
-    <!-- no translation found for notif_port_title_request (7779691701150579835) -->
-    <skip />
-    <!-- no translation found for notif_port_content_request (5762561378331864279) -->
-    <skip />
+    <string name="notif_port_title_request" msgid="7779691701150579835">"Nuwe poort is oopgemaak"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"Poort <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) is nou oop. Laat aanstuur toe?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"Aanvaar"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"Weier"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"Herprobeer"</string>
-    <!-- no translation found for notif_terminal_status_channel_id (1354694854639584368) -->
-    <skip />
-    <!-- no translation found for notif_keep_awake_channel_id (5299581301990946341) -->
-    <skip />
-    <!-- no translation found for notif_port_forwarding_channel_id (1711769547950910898) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_installing_content (7152102758294473183) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_starting_content (2984219358045243153) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_running_content (2841714963415326151) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_shutting_down_content (6324214533238993691) -->
-    <skip />
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"Terminaalstatus"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"Hou wakker"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"Poortaanstuur"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"Terminaal installeer tans"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"Terminaal begin tans"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"Terminaal loop tans"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"Terminaal skakel tans af"</string>
     <string name="settings_title" msgid="3035373808103055663">"Instellings"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Terug"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Gevorderd"</string>

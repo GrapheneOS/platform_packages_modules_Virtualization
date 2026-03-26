@@ -51,7 +51,7 @@ use android_system_virtualization_payload::aidl::android::system::virtualization
 
 use crate::cgroup_monitor::start_cgroup_monitor;
 use crate::dice::dice_derivation;
-use crate::encrypted_folders::set_encryption_key;
+use crate::encrypted_folders::{remove_encryption_key, set_encryption_key};
 use crate::encrypted_store_kek::{decrypt_kek, encrypt_kek};
 use crate::instance::{ApexData, EncryptedStoreMode, InstanceDisk, MicrodroidData};
 use crate::tenant::{TenantAttribute, TenantManager};
@@ -87,10 +87,10 @@ use rustutils::android::system_properties;
 use rustutils::android::system_properties::PropertyWatcher;
 use secretkeeper_comm::data_types::ID_SIZE;
 use std::borrow::Cow::{Borrowed, Owned};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{CStr, CString};
-use std::fs::{self, create_dir, create_dir_all, File, OpenOptions};
+use std::fs::{self, create_dir, create_dir_all, remove_dir_all, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::Shutdown;
 use std::os::fd::AsRawFd;
@@ -104,7 +104,7 @@ use std::process::{Child, Command, Stdio};
 use std::ptr;
 use std::str;
 use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 use vm_secret::VmSecret;
@@ -1417,6 +1417,7 @@ fn prepare_encryptedstore(
 /// Implementation of `IGuestAgent`
 struct GuestAgent {
     vm_secret: Arc<VmSecret>,
+    user_key_descriptors: Mutex<HashMap<i32, [u8; 16]>>,
 }
 
 impl Interface for GuestAgent {}
@@ -1443,16 +1444,18 @@ impl IGuestAgent for GuestAgent {
     }
 
     fn userUnlocked(&self, user_id: i32, kek: &Strong<dyn ICEStoreKEK>) -> binder::Result<()> {
-        let user_path = format!("{}/{user_id}", ENCRYPTEDSTORE_PER_USER_FOLDERS);
-        let user_path = Path::new(&user_path);
-        if let Err(e) = create_dir_all(user_path) {
+        let user_path = GuestAgent::get_encrypted_store(user_id);
+        if let Err(e) = create_dir_all(&user_path) {
             return Err(anyhow!("Cannot create {} {e}", user_path.display()))
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
         }
 
-        set_encrypted_store_per_user_key(kek, &self.vm_secret, user_path)
+        let key_identifier = set_encrypted_store_per_user_key(kek, &self.vm_secret, &user_path)
             .context("Failed to set per user key")
-            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)?;
+
+        self.user_key_descriptors.lock().unwrap().insert(user_id, key_identifier);
+        Ok(())
     }
 
     fn startOrStopAdbd(&self, start: bool) -> binder::Result<()> {
@@ -1470,13 +1473,40 @@ impl IGuestAgent for GuestAgent {
                 .or_service_specific_exception(-1)
         }
     }
+
+    fn userRemoved(&self, user_id: i32) -> binder::Result<()> {
+        let user_path = GuestAgent::get_encrypted_store(user_id);
+        if let Err(e) = remove_dir_all(&user_path) {
+            return Err(anyhow!("Cannot remove {} {e}", user_path.display()))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        }
+        Ok(())
+    }
+
+    fn userLocked(&self, user_id: i32) -> binder::Result<()> {
+        let binding = self.user_key_descriptors.lock().unwrap();
+        let Some(key_identifier) = binding.get(&user_id) else {
+            return Err(anyhow!("key not found for {}", user_id))
+                .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION);
+        };
+
+        // Remove the key from this folder. Note that unlike when we set the key, we use the
+        // root 'users' folder. This is because:
+        // 1) Keys can be added/removed from any file in the target mount. (Policy must be set on
+        //    the specific folder.)
+        // 2) If we try to remove the key from a folder encrypted with that key, the removal will
+        //    fail because one of the folders using the key is open.
+        remove_encryption_key(&PathBuf::from(&ENCRYPTEDSTORE_PER_USER_FOLDERS), key_identifier)
+            .context("Failed to remove per user key")
+            .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
+    }
 }
 
 fn set_encrypted_store_per_user_key(
     es_kek: &Strong<dyn ICEStoreKEK>,
     vm_secret: &VmSecret,
     user_path: &Path,
-) -> Result<()> {
+) -> Result<[u8; 16]> {
     let mut encryption_key = ZVec::new(ENCRYPTEDSTORE_KEKSIZE)?;
     vm_secret
         .derive_encryptedstore_key_encryption_key(&mut encryption_key)
@@ -1493,14 +1523,22 @@ fn set_encrypted_store_per_user_key(
             key
         }
     };
-    set_encryption_key(user_path, &key)?;
+    let key_identifier = set_encryption_key(user_path, &key)?;
     info!("Successfully unlocked per-user path {}", user_path.display());
-    Ok(())
+    Ok(key_identifier)
 }
 
 impl GuestAgent {
     fn new_binder(vm_secret: Arc<VmSecret>) -> Strong<dyn IGuestAgent> {
-        BnGuestAgent::new_binder(GuestAgent { vm_secret }, BinderFeatures::default())
+        BnGuestAgent::new_binder(
+            GuestAgent { vm_secret, user_key_descriptors: HashMap::new().into() },
+            BinderFeatures::default(),
+        )
+    }
+
+    fn get_encrypted_store(user_id: i32) -> PathBuf {
+        let user_path = format!("{}/{user_id}", ENCRYPTEDSTORE_PER_USER_FOLDERS);
+        PathBuf::from(user_path)
     }
 }
 

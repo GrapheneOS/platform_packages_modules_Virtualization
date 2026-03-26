@@ -21,10 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"Reikalingas leidimas"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"Kad terminalas tinkamai veiktų, jam reikia šių leidimų: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Nėra toliau nurodytų leidimų. Suteikite juos skiltyje „Nustatymai“: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
-    <!-- no translation found for permission_screen_title_required_nearby_devices (4359578610884771259) -->
-    <skip />
-    <!-- no translation found for permission_screen_message_required_nearby_devices (3325660162281238504) -->
-    <skip />
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"Būtinas leidimas „Įrenginiai netoliese“"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"Kad terminalas tinkamai veiktų, jam reikia leidimo „Įrenginiai netoliese“."</string>
     <string name="installer_title" msgid="1318592751395646215">"„Linux“ terminalo diegimas"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Norėdami paleisti „Linux“ terminalą, per tinklą turite atsisiųsti apytiksliai <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> duomenų.\nAr norite tęsti?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Atsisiuntimas naudojant tik „Wi-Fi“"</string>
@@ -81,27 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"Sistemos įvykiai"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Diegiamas „Linux“ terminalas"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"„Linux“ terminalas bus paleistas, kai diegimas bus baigtas"</string>
-    <!-- no translation found for notif_port_title_request (7779691701150579835) -->
-    <skip />
-    <!-- no translation found for notif_port_content_request (5762561378331864279) -->
-    <skip />
+    <string name="notif_port_title_request" msgid="7779691701150579835">"Atidarytas naujas prievadas"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> prievadas (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) dabar atidarytas. Leisti persiųsti?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"Sutikti"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"Atmesti"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"Band. dar kartą"</string>
-    <!-- no translation found for notif_terminal_status_channel_id (1354694854639584368) -->
-    <skip />
-    <!-- no translation found for notif_keep_awake_channel_id (5299581301990946341) -->
-    <skip />
-    <!-- no translation found for notif_port_forwarding_channel_id (1711769547950910898) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_installing_content (7152102758294473183) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_starting_content (2984219358045243153) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_running_content (2841714963415326151) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_shutting_down_content (6324214533238993691) -->
-    <skip />
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"Terminalo būsena"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"Neužmigdyti"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"Prievado numerio persiuntimas"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"Terminalas diegiamas"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"Terminalas paleidžiamas"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"Terminalas veikia"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"Terminalas išjungiamas"</string>
     <string name="settings_title" msgid="3035373808103055663">"Nustatymai"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Atgal"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Išplėstinės"</string>
