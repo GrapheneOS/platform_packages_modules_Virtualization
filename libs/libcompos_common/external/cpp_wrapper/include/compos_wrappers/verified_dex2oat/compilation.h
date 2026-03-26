@@ -25,6 +25,20 @@
 #include "verified_dex2oat/verified_dex2oat_compilation.h"
 
 namespace compos {
+enum Dex2OatStatus {
+    // Unable to get the status.
+    kUnknown = 0,
+    // Process exited normally with an exit code.
+    kExited = 1,
+    // Process terminated by a signal.
+    kSignaled = 2,
+    // Process timed out and killed.
+    kTimedOut = 3,
+    // Failure occurred during dex2oat preparation.
+    kStartFailed = 4,
+    kLast = kStartFailed
+};
+
 // A wrapper around the AVerifiedDex2Oat_CompilationContext API.
 class SecureCompilationContextInterface {
 public:
@@ -34,12 +48,11 @@ public:
     };
 
     struct FailureMetrics {
+        Dex2OatStatus status;
         uint32_t cpu_time_ms;
         uint32_t wall_time_ms;
         int32_t exit_code;
         uint32_t signal;
-        AVerifiedDex2Oat_FailureReason reason_code;
-        std::string_view reason;  // lifetime is equal to lifetime of associated FailureContext.
         std::string_view message; // lifetime is equal to lifetime of associated FailureContext.
     };
 
@@ -49,17 +62,11 @@ public:
                                                const std::vector<int>& fds) = 0;
 
     virtual android::base::Result<void> StartCompilation(
-            std::function<void(const AVerifiedDex2Oat_SuccessData*)>* on_success_cb,
-            std::function<void(const AVerifiedDex2Oat_FailureData*)>* on_failure_cb,
+            std::function<void(const SuccessMetrics&)>* on_success_cb,
+            std::function<void(const FailureMetrics&)>* on_failure_cb,
             int32_t manifest_fd, uint32_t timeout_seconds) = 0;
 
     virtual android::base::Result<void> Cancel() = 0;
-
-    virtual android::base::Result<SuccessMetrics> GetSuccessMetrics(
-            const AVerifiedDex2Oat_SuccessData* result_ctx) = 0;
-
-    virtual android::base::Result<FailureMetrics> GetFailureMetrics(
-            const AVerifiedDex2Oat_FailureData* result_ctx) = 0;
 };
 
 class SecureCompilationContext : public SecureCompilationContextInterface {
@@ -74,17 +81,11 @@ public:
     android::base::Result<void> AddArg(std::string_view arg, const std::vector<int>& fds) override;
 
     android::base::Result<void> StartCompilation(
-            std::function<void(const AVerifiedDex2Oat_SuccessData*)>* on_success_cb,
-            std::function<void(const AVerifiedDex2Oat_FailureData*)>* on_failure_cb,
+            std::function<void(const SuccessMetrics&)>* on_success_cb,
+            std::function<void(const FailureMetrics&)>* on_failure_cb,
             int32_t manifest_fd, uint32_t timeout_seconds) override;
 
     android::base::Result<void> Cancel() override;
-
-    android::base::Result<SuccessMetrics> GetSuccessMetrics(
-            const AVerifiedDex2Oat_SuccessData* result_ctx) override;
-
-    android::base::Result<FailureMetrics> GetFailureMetrics(
-            const AVerifiedDex2Oat_FailureData* result_ctx) override;
 
 private:
     explicit SecureCompilationContext(AVerifiedDex2Oat_CompilationContext* compilation_context);

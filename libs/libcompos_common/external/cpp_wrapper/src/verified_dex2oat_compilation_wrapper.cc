@@ -16,21 +16,72 @@
 
 #include <android-base/result.h>
 
-#include "compos/verified_dex2oat/compilation.h"
+#include "compos_wrappers/verified_dex2oat/compilation.h"
 
 using android::base::Result;
 
 namespace compos {
 namespace {
 void OnSuccess(const AVerifiedDex2Oat_SuccessData* result_ctx, void* user_callback) {
-    auto success_cb =
-            static_cast<std::function<void(const AVerifiedDex2Oat_SuccessData*)>*>(user_callback);
-    (*success_cb)(result_ctx);
+    SecureCompilationContextInterface::SuccessMetrics success_metric{};
+    if (__builtin_available(android 38, *)) {
+        success_metric.cpu_time_ms = AVerifiedDex2Oat_SuccessData_getCpuClockTimeMs(result_ctx);
+        success_metric.wall_time_ms = AVerifiedDex2Oat_SuccessData_getWallClockTimeMs(result_ctx);
+        auto success_cb = static_cast<
+                std::function<void(const SecureCompilationContextInterface::SuccessMetrics&)>*>(
+                user_callback);
+        (*success_cb)(success_metric);
+    }
 }
 void OnFailure(const AVerifiedDex2Oat_FailureData* result_ctx, void* user_callback) {
-    auto failure_cb =
-            static_cast<std::function<void(const AVerifiedDex2Oat_FailureData*)>*>(user_callback);
-    (*failure_cb)(result_ctx);
+    if (__builtin_available(android 38, *)) {
+        AVerifiedDex2Oat_FailureReason reason_code =
+                AVerifiedDex2Oat_FailureData_getReason(result_ctx);
+        Dex2OatStatus status = Dex2OatStatus::kUnknown;
+        auto signal = AVerifiedDex2Oat_FailureData_getSignal(result_ctx);
+        auto exit_code = AVerifiedDex2Oat_FailureData_getExitCode(result_ctx);
+        if (reason_code == AVERIFIED_DEX2OAT_DEX2OAT_FAILED) {
+            if (signal != 0) {
+                status = Dex2OatStatus::kSignaled;
+            } else if (exit_code != -1) {
+                status = Dex2OatStatus::kExited;
+            } else {
+                status = Dex2OatStatus::kUnknown;
+            }
+        } else if (reason_code == AVERIFIED_DEX2OAT_COMPILATION_SETUP_FAILED) {
+            status = Dex2OatStatus::kStartFailed;
+        } else if (reason_code == AVERIFIED_DEX2OAT_TIMEOUT) {
+            status = Dex2OatStatus::kTimedOut;
+        } else if (reason_code == AVERIFIED_DEX2OAT_FAILURE_UNKNOWN) {
+            status = Dex2OatStatus::kUnknown;
+        }
+
+        SecureCompilationContextInterface::FailureMetrics
+                failure_metric{.status = status,
+                               .cpu_time_ms =
+                                       AVerifiedDex2Oat_FailureData_getCpuClockTimeMs(result_ctx),
+                               .wall_time_ms =
+                                       AVerifiedDex2Oat_FailureData_getWallClockTimeMs(result_ctx),
+                               .exit_code = exit_code,
+                               .signal = signal,
+                               .message = AVerifiedDex2Oat_FailureData_getMessage(result_ctx)};
+        auto failure_cb = static_cast<
+                std::function<void(const SecureCompilationContextInterface::FailureMetrics&)>*>(
+                user_callback);
+        (*failure_cb)(failure_metric);
+    } else {
+        SecureCompilationContextInterface::FailureMetrics
+                failure_metric{.status = Dex2OatStatus::kUnknown,
+                               .cpu_time_ms = 0,
+                               .wall_time_ms = 0,
+                               .exit_code = -1,
+                               .signal = 0,
+                               .message = "API level is too low for secure compilation support."};
+        auto failure_cb = static_cast<
+                std::function<void(const SecureCompilationContextInterface::FailureMetrics&)>*>(
+                user_callback);
+        (*failure_cb)(failure_metric);
+    }
 }
 } // namespace
 
@@ -53,8 +104,8 @@ std::string_view SecureCompilationContext::StatusToString(AVerifiedDex2Oat_Statu
 
 Result<std::unique_ptr<SecureCompilationContext>> SecureCompilationContext::Create(
         int timeout_seconds) {
-    AVerifiedDex2Oat_CompilationContext* compilation_context = nullptr;
     if (__builtin_available(android 38, *)) {
+        AVerifiedDex2Oat_CompilationContext* compilation_context = nullptr;
         auto result =
                 AVerifiedDex2Oat_CompilationContext_create(&compilation_context,
                                                            /*timeout_seconds=*/timeout_seconds);
@@ -82,9 +133,9 @@ Result<void> SecureCompilationContext::AddArg(std::string_view arg, const std::v
 }
 
 Result<void> SecureCompilationContext::StartCompilation(
-        std::function<void(const AVerifiedDex2Oat_SuccessData*)>* success_user_data,
-        std::function<void(const AVerifiedDex2Oat_FailureData*)>* failure_user_data,
-        int32_t manifest_fd, uint32_t timeout_seconds) {
+        std::function<void(const SuccessMetrics&)>* success_user_data,
+        std::function<void(const FailureMetrics&)>* failure_user_data, int32_t manifest_fd,
+        uint32_t timeout_seconds) {
     if (__builtin_available(android 38, *)) {
         auto status =
                 AVerifiedDex2Oat_start(compilation_context_, OnSuccess, success_user_data,
@@ -108,31 +159,4 @@ Result<void> SecureCompilationContext::Cancel() {
     return Errorf("The current SDK is missing the VerifiedDex2Oat API.");
 }
 
-Result<SecureCompilationContext::SuccessMetrics> SecureCompilationContext::GetSuccessMetrics(
-        const AVerifiedDex2Oat_SuccessData* result_ctx) {
-    if (__builtin_available(android 38, *)) {
-        return SuccessMetrics{.cpu_time_ms =
-                                      AVerifiedDex2Oat_SuccessData_getCpuClockTimeMs(result_ctx),
-                              .wall_time_ms =
-                                      AVerifiedDex2Oat_SuccessData_getWallClockTimeMs(result_ctx)};
-    }
-    return Errorf("The current SDK is missing the VerifiedDex2Oat API.");
-}
-
-Result<SecureCompilationContext::FailureMetrics> SecureCompilationContext::GetFailureMetrics(
-        const AVerifiedDex2Oat_FailureData* result_ctx) {
-    if (__builtin_available(android 38, *)) {
-        auto failure_reason = AVerifiedDex2Oat_FailureData_getReason(result_ctx);
-        return FailureMetrics{.cpu_time_ms =
-                                      AVerifiedDex2Oat_FailureData_getCpuClockTimeMs(result_ctx),
-                              .wall_time_ms =
-                                      AVerifiedDex2Oat_FailureData_getWallClockTimeMs(result_ctx),
-                              .exit_code = AVerifiedDex2Oat_FailureData_getExitCode(result_ctx),
-                              .signal = AVerifiedDex2Oat_FailureData_getSignal(result_ctx),
-                              .reason_code = failure_reason,
-                              .reason = AVerifiedDex2Oat_FailureReason_toString(failure_reason),
-                              .message = AVerifiedDex2Oat_FailureData_getMessage(result_ctx)};
-    }
-    return Errorf("The current SDK is missing the VerifiedDex2Oat API.");
-}
 } // namespace compos
