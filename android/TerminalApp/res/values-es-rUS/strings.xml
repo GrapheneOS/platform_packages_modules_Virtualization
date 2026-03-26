@@ -21,10 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"Se requiere permiso"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"La terminal requiere los siguientes permisos para funcionar correctamente: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"Faltan los siguientes permisos. Otórgalos en Configuración: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
-    <!-- no translation found for permission_screen_title_required_nearby_devices (4359578610884771259) -->
-    <skip />
-    <!-- no translation found for permission_screen_message_required_nearby_devices (3325660162281238504) -->
-    <skip />
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"Se requiere permiso de dispositivos cercanos"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"La terminal requiere el permiso de dispositivos cercanos para funcionar correctamente."</string>
     <string name="installer_title" msgid="1318592751395646215">"Instala la terminal de Linux"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Para iniciar la terminal de Linux, debes descargar aproximadamente <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> de datos a través de la red.\n¿Quieres continuar?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Descargar contenido solo con Wi-Fi"</string>
@@ -81,27 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"Eventos del sistema"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Instalando la terminal de Linux"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"La terminal de Linux se iniciará después de que finalice la instalación"</string>
-    <!-- no translation found for notif_port_title_request (7779691701150579835) -->
-    <skip />
-    <!-- no translation found for notif_port_content_request (5762561378331864279) -->
-    <skip />
+    <string name="notif_port_title_request" msgid="7779691701150579835">"Se abrió un nuevo puerto"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"El puerto <xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) ahora está abierto. ¿Quieres permitir la redirección?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"Aceptar"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"Rechazar"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"Reintentar"</string>
-    <!-- no translation found for notif_terminal_status_channel_id (1354694854639584368) -->
-    <skip />
-    <!-- no translation found for notif_keep_awake_channel_id (5299581301990946341) -->
-    <skip />
-    <!-- no translation found for notif_port_forwarding_channel_id (1711769547950910898) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_installing_content (7152102758294473183) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_starting_content (2984219358045243153) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_running_content (2841714963415326151) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_shutting_down_content (6324214533238993691) -->
-    <skip />
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"Estado de la terminal"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"Mantener en funcionamiento"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"Redirección de puertos"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"La terminal se está instalando"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"La terminal se está iniciando"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"La terminal se está ejecutando"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"La terminal se está apagando"</string>
     <string name="settings_title" msgid="3035373808103055663">"Configuración"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"Atrás"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"Opciones avanzadas"</string>
