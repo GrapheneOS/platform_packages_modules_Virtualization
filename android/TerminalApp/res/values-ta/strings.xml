@@ -21,10 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"அனுமதி தேவை"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"சரியாகச் செயல்பட டெர்மினலுக்கு இந்த அனுமதிகள் தேவை: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"பின்வரும் அனுமதிகள் இல்லை. அமைப்புகளில் அவற்றை வழங்கவும்: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
-    <!-- no translation found for permission_screen_title_required_nearby_devices (4359578610884771259) -->
-    <skip />
-    <!-- no translation found for permission_screen_message_required_nearby_devices (3325660162281238504) -->
-    <skip />
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"அருகிலுள்ள சாதனங்களுக்கான அனுமதி தேவை"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"சரியாகச் செயல்பட டெர்மினல் ஆப்ஸுக்கு அருகிலுள்ள சாதனங்களுக்கான அனுமதி தேவை."</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux டெர்மினலை நிறுவுதல்"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Linux டெர்மினலைத் தொடங்க, நெட்வொர்க் மூலம் நீங்கள் சுமார் <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> தரவைப் பதிவிறக்க வேண்டும்.\nதொடர விரும்புகிறீர்களா?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"வைஃபையைப் பயன்படுத்தி மட்டும் பதிவிறக்கு"</string>
@@ -81,27 +79,18 @@
     <string name="notif_channel_system_events" msgid="3104042511095878110">"சிஸ்டம் நிகழ்வுகள்"</string>
     <string name="notif_installer_title" msgid="6291650228407922121">"Linux டெர்மினலை நிறுவுகிறது"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"நிறுவப்பட்டதும் Linux டெர்மினல் தொடங்கும்"</string>
-    <!-- no translation found for notif_port_title_request (7779691701150579835) -->
-    <skip />
-    <!-- no translation found for notif_port_content_request (5762561378331864279) -->
-    <skip />
+    <string name="notif_port_title_request" msgid="7779691701150579835">"புதிய போர்ட் திறக்கப்பட்டது"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"<xliff:g id="PORT_NUMBER">%1$d</xliff:g> (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) போர்ட் இப்போது திறக்கப்பட்டுள்ளது. போர்ட் அனுப்புதலை அனுமதிக்கவா?"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"ஏற்கிறேன்"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"நிராகரி"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"மீண்டும் முயல்க"</string>
-    <!-- no translation found for notif_terminal_status_channel_id (1354694854639584368) -->
-    <skip />
-    <!-- no translation found for notif_keep_awake_channel_id (5299581301990946341) -->
-    <skip />
-    <!-- no translation found for notif_port_forwarding_channel_id (1711769547950910898) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_installing_content (7152102758294473183) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_starting_content (2984219358045243153) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_running_content (2841714963415326151) -->
-    <skip />
-    <!-- no translation found for notif_terminal_app_status_shutting_down_content (6324214533238993691) -->
-    <skip />
+    <string name="notif_terminal_status_channel_id" msgid="1354694854639584368">"டெர்மினல் நிலை"</string>
+    <string name="notif_keep_awake_channel_id" msgid="5299581301990946341">"செயலிலேயே வைத்திருத்தல்"</string>
+    <string name="notif_port_forwarding_channel_id" msgid="1711769547950910898">"போர்ட் அனுப்புதல்"</string>
+    <string name="notif_terminal_app_status_installing_content" msgid="7152102758294473183">"டெர்மினல் நிறுவப்படுகிறது"</string>
+    <string name="notif_terminal_app_status_starting_content" msgid="2984219358045243153">"டெர்மினல் தொடங்குகிறது"</string>
+    <string name="notif_terminal_app_status_running_content" msgid="2841714963415326151">"டெர்மினல் இயக்கத்தில் உள்ளது"</string>
+    <string name="notif_terminal_app_status_shutting_down_content" msgid="6324214533238993691">"டெர்மினல் ஷட் டவுன் செய்யப்படுகிறது"</string>
     <string name="settings_title" msgid="3035373808103055663">"அமைப்புகள்"</string>
     <string name="settings_btn_back_desc" msgid="6283250947670033793">"பின்செல்லும்"</string>
     <string name="settings_advanced_title" msgid="1935607224859850897">"மேம்பட்டவை"</string>
