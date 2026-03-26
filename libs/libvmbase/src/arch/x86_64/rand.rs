@@ -36,6 +36,7 @@ pub(crate) const MAX_BYTES_PER_CALL: usize = size_of::<u64>();
 fn rdseed_supported() -> bool {
     // SAFETY: CPUID itself and CPUID leaf EAX=7,ECX=0 are available on all x86-64 implementations
     // and has no memory-safety side effects.
+    #[allow(unused_unsafe)]
     let extended_features = unsafe { __cpuid_count(7, 0) };
     extended_features.ebx & (1 << 18) != 0
 }
