@@ -58,6 +58,7 @@ class GuestAgentController(
             }
         }
 
+    @Synchronized
     fun startServer(): Int {
         if (aidlGuestAgent) {
             Log.w(TAG, "Ignoring gRPC setup. soong generated CIDATA implies AIDL communication.")
@@ -73,6 +74,7 @@ class GuestAgentController(
         return port
     }
 
+    @Synchronized
     fun start(cid: Int, guestAgent: IGuestAgent, service: IDebianService) {
         Log.d(TAG, "Starting guest agent controller with AIDL")
 
@@ -82,6 +84,7 @@ class GuestAgentController(
         }
         if (debianService != null) {
             Log.w(TAG, "GuestAgentController is started again. It might had been crashed.")
+            stop() // Safely stop existing before recreating
         }
         debianService = DebianService(context, scope, cid, guestAgent, service)
         clipboardController = ClipboardController(context, service)
@@ -89,6 +92,7 @@ class GuestAgentController(
         updatePortsState()
     }
 
+    @Synchronized
     fun stop() {
         portsStateManager.unregisterListener(portsListener)
         clipboardController?.onDestroy()
@@ -96,14 +100,17 @@ class GuestAgentController(
         stopDebianServer()
     }
 
+    @Synchronized
     fun pullClipboardFromGuest() {
         clipboardController?.pullFromGuest()
     }
 
+    @Synchronized
     fun pushClipboardToGuest() {
         clipboardController?.pushToGuestIfNeeded()
     }
 
+    @Synchronized
     fun shutdownVm() {
         debianService?.shutdownDebian()
     }
