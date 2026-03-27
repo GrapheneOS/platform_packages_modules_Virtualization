@@ -234,7 +234,11 @@ internal class ImageArchive {
     private fun commitInstallationAt(dir: Path) {
         // Mark the completion
         val marker = dir.resolve(InstalledImage.MARKER_FILENAME)
-        Files.createFile(marker)
+        try {
+            Files.createFile(marker)
+        } catch (e: FileAlreadyExistsException) {
+            Log.i(TAG, "Marker file already exists. Something's wrong, but continue anyway")
+        }
     }
 
     private class CountingInputStream(
