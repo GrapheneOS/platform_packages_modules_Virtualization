@@ -19,17 +19,24 @@ package android.system.virtualmachine;
 import android.annotation.NonNull;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
+import android.os.RemoteException;
 import android.system.virtualizationservice.IVirtualizationService;
+import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
 
+import java.lang.ref.Cleaner;
 import java.lang.ref.WeakReference;
 
 /** A running instance of virtmgr that is hosting a VirtualizationService AIDL service. */
 class VirtualizationService {
+    private static final String TAG = "VirtualizationService";
+
     static {
         System.loadLibrary("virtualizationservice_jni");
     }
+
+    private static final Cleaner sCleaner = Cleaner.create();
 
     /* Soft reference caching the last created instance of this class. */
     @GuardedBy("VirtualMachineManager.sCreateLock")
@@ -50,6 +57,24 @@ class VirtualizationService {
 
     private native boolean nativeIsOk(int clientFd);
 
+    private static class DeathAction implements Runnable {
+        private final IVirtualizationService mBinder;
+
+        DeathAction(IVirtualizationService binder) {
+            mBinder = binder;
+        }
+
+        @Override
+        public void run() {
+            try {
+                mBinder.requestShutdown();
+            } catch (RemoteException e) {
+                // This is expected if virtmgr has already exited.
+                Log.d(TAG, "Failed to request shutdown (virtmgr already dead?)", e);
+            }
+        }
+    }
+
     /*
      * Spawns a new virtmgr subprocess that will host a VirtualizationService
      * AIDL service.
@@ -66,6 +91,7 @@ class VirtualizationService {
             throw new VirtualMachineException("Could not connect to Virtualization Manager");
         }
         mBinder = IVirtualizationService.Stub.asInterface(binder);
+        sCleaner.register(this, new DeathAction(mBinder));
     }
 
     /* Returns the IVirtualizationService binder. */

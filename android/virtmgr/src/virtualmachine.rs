@@ -207,6 +207,7 @@ pub struct VirtualizationService {
     /// the Binder client are dropped the weak reference here will become invalid, and will be
     /// removed from the list opportunistically the next time `add_vm` is called.
     pub vms: Mutex<Vec<Weak<VmInstance>>>,
+    server: Mutex<Option<Weak<RpcServer>>>,
 }
 
 impl Interface for VirtualizationService {
@@ -457,6 +458,17 @@ impl aidl::IVirtualizationService for VirtualizationService {
                 .or_binder_exception(ExceptionCode::UNSUPPORTED_OPERATION)
         }
     }
+
+    fn requestShutdown(&self) -> binder::Result<()> {
+        info!("Shutdown requested");
+        if let Some(server) = self.server.lock().unwrap().as_ref().and_then(|s| s.upgrade()) {
+            server.shutdown().map_err(|e| {
+                error!("Failed to shutdown RpcServer: {e:?}");
+                StatusCode::UNKNOWN_ERROR
+            })?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -548,6 +560,10 @@ fn find_partition(path: Option<&Path>) -> binder::Result<CallingPartition> {
 impl VirtualizationService {
     pub fn init() -> VirtualizationService {
         VirtualizationService::default()
+    }
+
+    pub fn set_server(&self, server: Weak<RpcServer>) {
+        *self.server.lock().unwrap() = Some(server);
     }
 
     fn create_early_vm_context(
