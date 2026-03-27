@@ -180,7 +180,7 @@ internal class ImageArchive {
                         Files.createDirectories(dir)
                         var entry: ArchiveEntry?
                         while ((tarStream.nextEntry.also { entry = it }) != null) {
-                            val name = entry!!.getName()
+                            val name = entry!!.getName().removePrefix("./")
                             hasCidataInImage = if (name == CIDATA_NAME) true else hasCidataInImage
                             hasCidataBuildIdInImage =
                                 if (name == InstalledImage.CIDATA_BUILD_ID_FILENAME) true
