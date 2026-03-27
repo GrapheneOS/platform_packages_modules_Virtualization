@@ -4,6 +4,7 @@ import sys
 import curses
 import subprocess
 import shutil
+import time
 from pathlib import Path
 from datetime import datetime
 
@@ -465,6 +466,9 @@ if __name__ == "__main__":
     if os.geteuid() != 0:
         print("Error: Restoration must be run as root (sudo).")
         sys.exit(1)
+
+    # TODO we don't like this hack!
+    time.sleep(3)
 
     # Wrap main in curses context
     failed_packages = curses.wrapper(main)
