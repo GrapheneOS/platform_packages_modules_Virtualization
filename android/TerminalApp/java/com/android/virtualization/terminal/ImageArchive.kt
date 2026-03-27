@@ -173,16 +173,18 @@ internal class ImageArchive {
                             trySend(bytes)
                         }
 
-                    var hasGrpcCidata = false
+                    var hasCidataInImage = false
+                    var hasCidataBuildIdInImage = false
                     TarArchiveInputStream(GzipCompressorInputStream(countingStream)).use { tarStream
                         ->
                         Files.createDirectories(dir)
                         var entry: ArchiveEntry?
                         while ((tarStream.nextEntry.also { entry = it }) != null) {
                             val name = entry!!.getName()
-                            if (name == CIDATA_NAME) {
-                                hasGrpcCidata = true
-                            }
+                            hasCidataInImage = if (name == CIDATA_NAME) true else hasCidataInImage
+                            hasCidataBuildIdInImage =
+                                if (name == InstalledImage.CIDATA_BUILD_ID_FILENAME) true
+                                else hasCidataBuildIdInImage
                             val to = dir.resolve(name)
                             if (Files.isDirectory(to)) {
                                 Files.createDirectories(to)
@@ -204,11 +206,13 @@ internal class ImageArchive {
                         // agent.
                         val cidataBuildIdPath = dir.resolve(InstalledImage.CIDATA_BUILD_ID_FILENAME)
                         cidataBuildIdPath.writeText("dev")
-                    } else if (hasGrpcCidata) {
+                    } else if (hasCidataInImage) {
                         // Something went bad, and we need to revert to use cidata.iso inside
-                        // images.tar.gz. Remove marker here.
-                        val cidataBuildId = dir.resolve(InstalledImage.CIDATA_BUILD_ID_FILENAME)
-                        Files.deleteIfExists(cidataBuildId)
+                        // images.tar.gz.
+                        if (!hasCidataBuildIdInImage) {
+                            val cidataBuildId = dir.resolve(InstalledImage.CIDATA_BUILD_ID_FILENAME)
+                            Files.deleteIfExists(cidataBuildId)
+                        }
                     } else {
                         val installedCidata = dir.resolve(CIDATA_NAME)
                         Log.d(TAG, "Installing bundled cidata.iso")
