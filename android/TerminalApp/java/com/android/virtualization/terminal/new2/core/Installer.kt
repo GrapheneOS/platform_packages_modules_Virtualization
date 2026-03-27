@@ -134,7 +134,13 @@ object Installer {
         installJob =
             repositoryScope.launch {
                 try {
-                    _installState.value = InstallState.Checking
+                    val progressFlow = MutableStateFlow(0L)
+                    _installState.value =
+                        InstallState.Installing(
+                            ESTIMATED_DOWNLOAD_SIZE,
+                            progressFlow.asStateFlow(),
+                            networkMonitor?.isWifiConnected?.value ?: false,
+                        )
                     installedImage.uninstallAndBackup()
                     installInternal()
                 } catch (e: IOException) {
