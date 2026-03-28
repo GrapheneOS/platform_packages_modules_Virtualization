@@ -4,6 +4,7 @@ import sys
 import curses
 import subprocess
 import shutil
+import time
 from pathlib import Path
 from datetime import datetime
 
@@ -445,6 +446,22 @@ def finish_restoration_and_cleanup(ui):
         "Success", "Restoration successful.\nPress [O] to exit.", [("O", "OK")]
     )
 
+def wait_for_terminal_ready():
+    """
+    Waits 5 secs until the terminal is initialized, especially for the size.
+    Do this outside of the curses context, otherwise terminal size isn't updated.
+    """
+    start_time = time.time()
+    while (time.time() - start_time) < 5:
+        if sys.stdout.isatty() and os.environ.get("TERM"):
+            try:
+                cols, lines = shutil.get_terminal_size()
+                if cols > 5 and lines > 5:
+                    return True
+            except OSError:
+                pass
+        time.sleep(0.1)
+    return False
 
 def main(stdscr):
     """Main UI orchestration loop."""
@@ -465,6 +482,10 @@ if __name__ == "__main__":
     if os.geteuid() != 0:
         print("Error: Restoration must be run as root (sudo).")
         sys.exit(1)
+
+    if not wait_for_terminal_ready():
+      print("Error: Fail to launch restore-backup. Run 'sudo restore-backup' again")
+      sys.exit(1)
 
     # Wrap main in curses context
     failed_packages = curses.wrapper(main)

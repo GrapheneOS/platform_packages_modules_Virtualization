@@ -135,4 +135,9 @@ interface IVirtualizationService {
      * This method is protected by the DEBUG_VIRTUAL_MACHINE permission.
      */
     void startOrStopAdbd(in int cid, in boolean start);
+
+    /**
+     * Notification that the virtualization service should shut down.
+     */
+    void requestShutdown();
 }

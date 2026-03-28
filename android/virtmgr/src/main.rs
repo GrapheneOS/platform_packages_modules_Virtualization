@@ -134,6 +134,15 @@ fn main() {
         .expect("Failed to start RpcServer");
     server.set_supported_file_descriptor_transport_modes(&[FileDescriptorTransportMode::Unix]);
 
+    let server = std::sync::Arc::new(server);
+
+    // Give a weak reference of the server to the service so that it can shut down the server.
+    use binder::binder_impl::Binder;
+    let binder: Binder<aidl::BnVirtualizationService> =
+        service.as_binder().clone().try_into().unwrap();
+    let service_impl: &VirtualizationService = binder.downcast_binder().unwrap();
+    service_impl.set_server(std::sync::Arc::downgrade(&server));
+
     info!("Started VirtualizationService RpcServer. Ready to accept connections");
 
     // Signal readiness to the caller by closing our end of the pipe.
@@ -160,10 +169,7 @@ fn main() {
     info!("Shutting down VirtualizationService RpcServer");
 
     // Do all the standard cleanup we can, mainly to make sure we join logging threads.
-    use binder::binder_impl::Binder;
-    let binder: Binder<aidl::BnVirtualizationService> = service.as_binder().try_into().unwrap();
-    let service: &VirtualizationService = binder.downcast_binder().unwrap();
-    service.get_vms().iter().for_each(|vm| {
+    service_impl.get_vms().iter().for_each(|vm| {
         if let Err(e) = vm.kill() {
             error!("VM (cid: {}) did not die when I tried to kill it: {:#}", vm.cid, e);
         }
