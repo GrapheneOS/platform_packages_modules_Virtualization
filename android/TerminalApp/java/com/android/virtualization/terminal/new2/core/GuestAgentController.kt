@@ -90,6 +90,7 @@ class GuestAgentController(
         clipboardController = ClipboardController(context, service)
         portsStateManager.registerListener(portsListener)
         updatePortsState()
+        StorageBalloonWorker.start(context, debianService!!)
     }
 
     @Synchronized
