@@ -21,8 +21,8 @@
     <string name="permission_dlg_title_required" msgid="7330907054330473886">"Rechten vereist"</string>
     <string name="permission_dlg_message_required" msgid="7912498378440483592">"Terminal heeft de volgende rechten nodig om correct te werken: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
     <string name="permission_snkbar_message_missing" msgid="4744825588569702643">"De volgende rechten ontbreken. Verleen ze via Instellingen: <xliff:g id="PERMISSION_LIST">%s</xliff:g>"</string>
-    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"Het recht Apparaten in de buurt nodig"</string>
-    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"Terminal heeft het recht Apparaten in de buurt nodig om correct te werken."</string>
+    <string name="permission_screen_title_required_nearby_devices" msgid="4359578610884771259">"Het recht \'Apparaten in de buurt\' nodig"</string>
+    <string name="permission_screen_message_required_nearby_devices" msgid="3325660162281238504">"Terminal heeft het recht \'Apparaten in de buurt\' nodig om correct te werken."</string>
     <string name="installer_title" msgid="1318592751395646215">"Linux-terminal installeren"</string>
     <string name="installer_desc" msgid="3104802716504777741">"Als je Linux-terminal wilt starten, moet je ongeveer <xliff:g id="EXPECTED_SIZE">‎%1$s‎</xliff:g> aan data downloaden via het netwerk.\nWil je doorgaan?"</string>
     <string name="installer_chkbox_wifi_only" msgid="537964393002020019">"Alleen downloaden via wifi"</string>
