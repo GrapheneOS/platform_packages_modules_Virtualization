@@ -80,7 +80,7 @@
     <string name="notif_installer_title" msgid="6291650228407922121">"جارٍ تثبيت Terminal بنظام التشغيل Linux"</string>
     <string name="notif_installer_desc" msgid="6325205637105342778">"سيتم تشغيل Terminal بنظام التشغيل Linux بعد اكتمال عملية التثبيت"</string>
     <string name="notif_port_title_request" msgid="7779691701150579835">"تم فتح منفذ جديد"</string>
-    <string name="notif_port_content_request" msgid="5762561378331864279">"تم فتح المنفذ <xliff:g id="PORT_NUMBER">%1$d</xliff:g>‏ (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) الآن. السماح بإعادة التوجيه؟"</string>
+    <string name="notif_port_content_request" msgid="5762561378331864279">"تم فتح المنفذ <xliff:g id="PORT_NUMBER">%1$d</xliff:g>‏ (<xliff:g id="PROCESS_NAME">%2$s</xliff:g>) الآن. هل المطلوب السماح بإعادة التوجيه؟"</string>
     <string name="notif_port_action_accept" msgid="3820564627354207468">"قبول"</string>
     <string name="notif_port_action_deny" msgid="8360517228582217225">"رفض"</string>
     <string name="notif_btn_retry" msgid="6376023692126285362">"إعادة المحاولة"</string>
