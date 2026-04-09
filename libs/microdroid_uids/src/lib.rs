@@ -36,4 +36,10 @@ pub const MICRODROID_PAYLOAD_UID: u32 = 6000;
 
 /// The UID of the first tenant. Tenant UIDs are allocated sequentially, starting
 /// from this value. This is analogous to `AID_APP_START` for Android apps.
-pub const MICRODROID_FIRST_TENANT_UID: u32 = 10000;
+pub const MICRODROID_TENANT_UID_RANGE_START: u32 = 10000;
+
+/// The maximum allowed UID for a tenant.
+/// This limit ensures we stay within a safe range, avoiding potential conflicts
+/// with reserved UIDs like 65535 (overflow) or other system UIDs, while providing
+/// ample space for tenants.
+pub const MICRODROID_TENANT_UID_RANGE_END: u32 = 65534;

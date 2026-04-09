@@ -164,6 +164,7 @@ mod tests {
     ) -> TenantConfig {
         TenantConfig::Apk(TenantConfiguration {
             name: name.to_string(),
+            uid: 10000,
             task: None,
             min_version,
             expected_authority: create_authority(expected_authority),
@@ -178,6 +179,7 @@ mod tests {
     ) -> TenantConfig {
         TenantConfig::Apex(TenantConfiguration {
             name: name.to_string(),
+            uid: 10000,
             task: None,
             min_version,
             expected_authority: create_authority(expected_authority),
@@ -354,6 +356,7 @@ mod tests {
         let json_str = r#"{
             "package": "apk",
             "name": "com.test.apk",
+            "uid": 10000,
             "expected_authority": {
                 "dev-keys": "some_authority",
                 "test-keys": "some_authority",
@@ -399,6 +402,7 @@ mod tests {
         };
         let tenant_config = [TenantConfig::Apk(TenantConfiguration {
             name: "com.test.apk".to_string(),
+            uid: 10000,
             task: None,
             min_version: 10,
             expected_authority: authority,

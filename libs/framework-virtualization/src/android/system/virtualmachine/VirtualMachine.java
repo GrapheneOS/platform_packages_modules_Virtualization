@@ -115,8 +115,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -254,6 +256,19 @@ public class VirtualMachine implements AutoCloseable {
      * from the event and always send this fixed value.
      */
     private static final int TRACKPAD_PRESSURE_PRESSED = 50;
+
+    /**
+     * The UID of the first tenant. Tenant UIDs are allocated sequentially, starting from this
+     * value. This is analogous to `AID_APP_START` for Android apps. See
+     * packages/modules/Virtualization/libs/microdroid_uids/src/lib.rs
+     */
+    private static final int MICRODROID_TENANT_UID_RANGE_START = 10000;
+
+    /**
+     * The maximum allowed UID for a tenant. See
+     * packages/modules/Virtualization/libs/microdroid_uids/src/lib.rs
+     */
+    private static final int MICRODROID_TENANT_UID_RANGE_END = 65534;
 
     /** Name of the file backing the encrypted storage */
     private static final String ENCRYPTED_STORE_FILE = "storage.img";
@@ -1816,7 +1831,13 @@ public class VirtualMachine implements AutoCloseable {
                 }
             } catch (IOException e) {
                 throw new VirtualMachineException("failed to persist files", e);
-            } catch (IllegalStateException | ServiceSpecificException e) {
+                } catch (IllegalStateException e) {
+                    throw new VirtualMachineException(e);
+                } catch (ServiceSpecificException e) {
+                    if (e.errorCode == ErrorCode.PAYLOAD_INVALID_CONFIG) {
+                        throw new VirtualMachineException(
+                                e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
+                    }
                 throw new VirtualMachineException(e);
             } catch (RemoteException e) {
                 throw e.rethrowAsRuntimeException();
@@ -1824,7 +1845,6 @@ public class VirtualMachine implements AutoCloseable {
         }
     }
     }
-
     private void createIdSigsAndUpdateConfig(
             IVirtualizationService service, VirtualMachineAppConfig appConfig)
             throws RemoteException, FileNotFoundException {
@@ -2591,6 +2611,7 @@ public class VirtualMachine implements AutoCloseable {
             throws VirtualMachineException {
         try {
             List<String> apks = new ArrayList<>();
+            Set<Integer> seenUids = new HashSet<>();
             reader.beginObject(); // Start of the main JSON object
             while (reader.hasNext()) {
                 if (reader.nextName().equals("tenants")) {
@@ -2599,15 +2620,42 @@ public class VirtualMachine implements AutoCloseable {
                         reader.beginObject(); // Start of a tenant object
                         String pkg = "";
                         String name = "";
+                        boolean hasUid = false;
+                        int uid = 0;
                         while (reader.hasNext()) {
                             String tenantName = reader.nextName();
                             if (tenantName.equals("package")) {
                                 pkg = reader.nextString();
                             } else if (tenantName.equals("name")) {
                                 name = reader.nextString();
+                            } else if (tenantName.equals("uid")) {
+                                uid = reader.nextInt();
+                                hasUid = true;
                             } else {
                                 reader.skipValue(); // Skip other fields
                             }
+                        }
+                        if (!hasUid) {
+                            throw new VirtualMachineException(
+                                    "missing field `uid`",
+                                    VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
+                        }
+                        if (uid < MICRODROID_TENANT_UID_RANGE_START
+                                || uid > MICRODROID_TENANT_UID_RANGE_END) {
+                            throw new VirtualMachineException(
+                                    "Tenant UID "
+                                            + uid
+                                            + " is invalid. It must be in range ["
+                                            + MICRODROID_TENANT_UID_RANGE_START
+                                            + ", "
+                                            + MICRODROID_TENANT_UID_RANGE_END
+                                            + "]",
+                                    VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
+                        }
+                        if (!seenUids.add(uid)) {
+                            throw new VirtualMachineException(
+                                    "Duplicate tenant UID found: " + uid,
+                                    VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
                         }
                         reader.endObject(); // End of a tenant object
 
@@ -2622,7 +2670,7 @@ public class VirtualMachine implements AutoCloseable {
             }
             reader.endObject(); // End of the main JSON object
             return apks;
-        } catch (IOException e) {
+        } catch (IOException | IllegalStateException e) {
             throw new VirtualMachineException(
                     e, VirtualMachineException.CODE_PAYLOAD_CONFIG_MALFORMED);
         }

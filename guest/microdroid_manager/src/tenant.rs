@@ -56,7 +56,6 @@ impl TenantAttribute {
 #[derive(Debug)]
 pub(crate) struct TenantManager {
     tenants: HashMap<String, TenantAttribute>,
-    next_tenant_uid: u32,
 }
 
 impl TenantManager {
@@ -64,23 +63,27 @@ impl TenantManager {
         Self {
             // TODO(basantwani): Add persistence by integrating with InstanceSpec
             tenants: HashMap::new(),
-            next_tenant_uid: microdroid_uids::MICRODROID_FIRST_TENANT_UID,
         }
     }
 
     pub fn initialize(tenants_config: &[TenantConfig]) -> Result<Self> {
         let mut manager = Self::new();
         for tenant in tenants_config {
-            let tenant = match tenant {
-                TenantConfig::Apex(c) => c,
-                TenantConfig::Apk(c) => c,
+            let (tenant, uid) = match tenant {
+                TenantConfig::Apex(c) => (c, c.uid),
+                TenantConfig::Apk(c) => (c, c.uid),
             };
-            manager.register_tenant_package(&tenant.name, tenant.task.as_ref())?;
+            manager.register_tenant_package(&tenant.name, uid, tenant.task.as_ref())?;
         }
         Ok(manager)
     }
 
-    fn register_tenant_package(&mut self, package_name: &str, task: Option<&Task>) -> Result<()> {
+    fn register_tenant_package(
+        &mut self,
+        package_name: &str,
+        uid: u32,
+        task: Option<&Task>,
+    ) -> Result<()> {
         if self.tenants.contains_key(package_name) {
             bail!(MicrodroidError::PayloadInvalidConfig(format!(
                 "Duplicate tenant name found during registration: {:?}",
@@ -88,8 +91,25 @@ impl TenantManager {
             )));
         }
 
-        let uid = self.next_tenant_uid;
-        self.next_tenant_uid += 1;
+        if !(microdroid_uids::MICRODROID_TENANT_UID_RANGE_START
+            ..=microdroid_uids::MICRODROID_TENANT_UID_RANGE_END)
+            .contains(&uid)
+        {
+            bail!(MicrodroidError::PayloadInvalidConfig(format!(
+                "Tenant UID {} is invalid. It must be in range [{}, {}]",
+                uid,
+                microdroid_uids::MICRODROID_TENANT_UID_RANGE_START,
+                microdroid_uids::MICRODROID_TENANT_UID_RANGE_END
+            )));
+        }
+
+        if self.tenants.values().any(|t| t.uid == uid) {
+            bail!(MicrodroidError::PayloadInvalidConfig(format!(
+                "Duplicate tenant UID found: {}",
+                uid
+            )));
+        }
+
         let selinux_domain = if let Some(Task { selinux_type: Some(selinux_type), .. }) = task {
             let selinux_type_str = selinux_type.to_str().expect("SELinux type must be valid UTF-8");
             Some(CString::new(format!("u:r:{selinux_type_str}:s0")).unwrap())
@@ -269,4 +289,73 @@ pub(crate) fn validate_tenants_against_existing_spec_update_spec(
             .with_context(|| "Failed to write instance spec for new instance")?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use microdroid_payload_config::{ExpectedAuthority, TenantConfiguration};
+
+    fn create_tenant_config(name: &str, uid: u32) -> TenantConfig {
+        TenantConfig::Apk(TenantConfiguration {
+            name: name.to_string(),
+            uid,
+            task: None,
+            min_version: 1,
+            expected_authority: ExpectedAuthority {
+                dev_key: "".to_string(),
+                test_key: "".to_string(),
+                release_key: "".to_string(),
+            },
+            cgroup_config: None,
+        })
+    }
+
+    #[test]
+    fn test_initialize_valid_tenants() {
+        let configs = vec![
+            create_tenant_config("com.example.tenant1", 10000),
+            create_tenant_config("com.example.tenant2", 10001),
+        ];
+        let manager = TenantManager::initialize(&configs);
+        assert!(manager.is_ok());
+        let manager = manager.unwrap();
+        let tenant1_attr = manager.get_tenant_attribute("com.example.tenant1").unwrap();
+        assert_eq!(tenant1_attr.uid, 10000);
+        let tenant2_attr = manager.get_tenant_attribute("com.example.tenant2").unwrap();
+        assert_eq!(tenant2_attr.uid, 10001);
+    }
+
+    #[test]
+    fn test_initialize_duplicate_name() {
+        let configs = vec![
+            create_tenant_config("com.example.tenant1", 10000),
+            create_tenant_config("com.example.tenant1", 10001),
+        ];
+        let err = TenantManager::initialize(&configs).unwrap_err();
+        assert!(err.to_string().contains("Duplicate tenant name"));
+    }
+
+    #[test]
+    fn test_initialize_duplicate_uid() {
+        let configs = vec![
+            create_tenant_config("com.example.tenant1", 10000),
+            create_tenant_config("com.example.tenant2", 10000),
+        ];
+        let err = TenantManager::initialize(&configs).unwrap_err();
+        assert!(err.to_string().contains("Duplicate tenant UID"));
+    }
+
+    #[test]
+    fn test_initialize_uid_outside_range() {
+        let err_low =
+            TenantManager::initialize(&[create_tenant_config("com.example.tenant1", 9999)])
+                .unwrap_err();
+        assert!(err_low.to_string().contains("Tenant UID 9999 is invalid"));
+
+        let err_high =
+            TenantManager::initialize(&[create_tenant_config("com.example.tenant1", 65535)])
+                .unwrap_err();
+        assert!(err_high.to_string().contains("Tenant UID 65535 is invalid"));
+    }
 }

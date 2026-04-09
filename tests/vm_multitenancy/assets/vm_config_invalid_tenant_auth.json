@@ -7,6 +7,7 @@
     {
       "package": "apk",
       "name": "com.android.microdroid.test",
+      "uid": 10000,
       "min_version": 36,
       "expected_authority": {
         "dev-keys": "Aperfectlyexecutedplanensuresuccessinanyendeavorregardlessofthechallengesweface.Teamworkistheroadtovictoryandgrowthmorenowistime",
