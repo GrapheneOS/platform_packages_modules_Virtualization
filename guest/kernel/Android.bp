@@ -29,11 +29,13 @@ license {
 filegroup {
     name: "microdroid_kernel_prebuilt-arm64",
     // Below are properties that are conditionally set depending on value of build flags.
-    srcs: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
-        "android15_66": ["android15-6.6/arm64/kernel-6.6"],
-        "android15_66_desktop": ["android15-6.6/arm64/kernel-6.6"],
-        "android16_612": ["android16-6.12/arm64/kernel-6.12"],
-        default: [],
+    srcs: select((release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), soong_config_variable("ANDROID", "target_board_platform")), {
+        ("android15_66", "gs101"): ["android15-6.6/arm64/lto_thin/kernel-6.6"],
+        ("android15_66", "gs201"): ["android15-6.6/arm64/lto_thin/kernel-6.6"],
+        ("android15_66", default): ["android15-6.6/arm64/kernel-6.6"],
+        ("android15_66_desktop", default): ["android15-6.6/arm64/kernel-6.6"],
+        ("android16_612", default): ["android16-6.12/arm64/kernel-6.12"],
+        (default, default): [],
     }),
 }
 
