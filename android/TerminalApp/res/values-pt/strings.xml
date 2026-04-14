@@ -97,15 +97,9 @@
     <string name="settings_advanced_memory_title" msgid="8796464072611711320">"Tamanho da memória"</string>
     <string name="settings_advanced_memory_valid_range" msgid="5430734730161446612">"Intervalo válido: <xliff:g id="MEMORY_RANGE">%1$s</xliff:g>"</string>
     <string name="settings_display_resolution_title" msgid="2299422750697419842">"Resolução da tela"</string>
-    <!-- String.format failed for translation -->
-    <!-- no translation found for settings_display_resolution_full (1934435847075952454) -->
-    <skip />
-    <!-- String.format failed for translation -->
-    <!-- no translation found for settings_display_resolution_half (8817295705374047791) -->
-    <skip />
-    <!-- String.format failed for translation -->
-    <!-- no translation found for settings_display_resolution_quarter (3705900552539109641) -->
-    <skip />
+    <string name="settings_display_resolution_full" msgid="1934435847075952454">"100%%"</string>
+    <string name="settings_display_resolution_half" msgid="8817295705374047791">"50%%"</string>
+    <string name="settings_display_resolution_quarter" msgid="3705900552539109641">"25%%"</string>
     <string name="settings_display_resolution_full_hint" msgid="5979427185150015339">"O desempenho pode ser reduzido."</string>
     <string name="settings_display_resolution_half_hint" msgid="7952269802485928968">"Recomendada"</string>
     <string name="settings_display_resolution_quarter_hint" msgid="770354668663140131">"A qualidade pode ser reduzida."</string>
