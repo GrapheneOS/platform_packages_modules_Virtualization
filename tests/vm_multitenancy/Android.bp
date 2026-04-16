@@ -41,6 +41,8 @@ java_defaults {
         "libvm_attestation_test_payload",
         "MicrodroidTestNativeOnAlternatePortLib",
     ],
+    // We only support 64-bit ABI, but xTS demands all APKs to be multi-ABI.
+    compile_multilib: "both",
     jni_uses_platform_apis: true,
     use_embedded_native_libs: true,
     sdk_version: "test_current",

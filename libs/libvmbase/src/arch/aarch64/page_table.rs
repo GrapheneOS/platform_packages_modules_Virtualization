@@ -131,10 +131,6 @@ impl MmuOps for PageTable {
     }
 
     fn map_data_track_dirty_state(&mut self, range: &Range<usize>) -> MmuResult<()> {
-        if !self.uses_hafdbs {
-            // TODO(b/472909113): Avoid SW DBM until data corruptions are fixed.
-            return self.map_data(range);
-        }
         let region = as_memory_region(range);
         // Map the region down to pages to minimize the size of the regions that will be marked
         // dirty once a store hits them, but also to ensure that we can clear the read-only

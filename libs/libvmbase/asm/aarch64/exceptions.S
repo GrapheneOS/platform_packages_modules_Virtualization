@@ -15,8 +15,8 @@
  */
 
 /**
- * Saves the volatile registers onto the stack. This currently takes 14
- * instructions, so it can be used in exception handlers with 18 instructions
+ * Saves the volatile registers onto the stack. This currently takes 12
+ * instructions, so it can be used in exception handlers with 20 instructions
  * left.
  *
  * On return, x0 and x1 are initialised to elr_el1 and spsr_el1 respectively,
@@ -40,18 +40,19 @@
 	 * Save elr_el1 & spsr_el1. This such that we can take nested exception
 	 * and still be able to unwind.
 	 */
-	mrs x0, elr_el1
-	mrs x1, spsr_el1
-	stp x0, x1, [sp, #8 * 22]
+	bl save_status_regs
 .endm
 
 /**
- * Restores the volatile registers from the stack. This currently takes 14
- * instructions, so it can be used in exception handlers while still leaving 18
- * instructions left; if paired with save_volatile_to_stack, there are 4
+ * Restores the volatile registers from the stack. This currently takes 12
+ * instructions, so it can be used in exception handlers while still leaving 20
+ * instructions left; if paired with save_volatile_to_stack, there are 8
  * instructions to spare.
  */
 .macro restore_volatile_from_stack
+	/* Restore registers elr_el1 & spsr_el1, using x0 & x1 as scratch. */
+	bl restore_status_regs
+
 	/* Restore registers x2-x18, x29 & x30. */
 	ldp x2, x3, [sp, #8 * 2]
 	ldp x4, x5, [sp, #8 * 4]
@@ -64,11 +65,6 @@
 	ldr x18, [sp, #8 * 18]
 	ldp x29, x30, [sp, #8 * 20]
 
-	/* Restore registers elr_el1 & spsr_el1, using x0 & x1 as scratch. */
-	ldp x0, x1, [sp, #8 * 22]
-	msr elr_el1, x0
-	msr spsr_el1, x1
-
 	/* Restore x0 & x1, and release stack space. */
 	ldp x0, x1, [sp], #8 * 24
 .endm
@@ -78,14 +74,16 @@
  * SP0. It behaves similarly to the SPx case by first switching to SPx, doing
  * the work, then switching back to SP0 before returning.
  *
- * Switching to SPx and calling the Rust handler takes 16 instructions. To
- * restore and return we need an additional 16 instructions, so we can implement
- * the whole handler within the allotted 32 instructions.
+ * Switching to SPx and calling the Rust handler takes 15 instructions. To
+ * restore and return we need an additional 15 instructions, so we can implement
+ * the whole handler within the allotted 30 instructions.
  */
 .macro current_exception_sp0 handler:req
 	msr spsel, #1
 	save_volatile_to_stack
+	bl save_fpsimd_to_stack
 	bl \handler
+	bl restore_fpsimd_from_stack
 	restore_volatile_from_stack
 	msr spsel, #0
 	eret
@@ -99,13 +97,15 @@
  * This also works for exceptions taken from EL0, if we don't care about
  * non-volatile registers.
  *
- * Saving state and jumping to the Rust handler takes 15 instructions, and
- * restoring and returning also takes 15 instructions, so we can fit the whole
- * handler in 30 instructions, under the limit of 32.
+ * Saving state and jumping to the Rust handler takes 14 instructions, and
+ * restoring and returning also takes 14 instructions, so we can fit the whole
+ * handler in 28 instructions, under the limit of 32.
  */
 .macro current_exception_spx handler:req
 	save_volatile_to_stack
+	bl save_fpsimd_to_stack
 	bl \handler
+	bl restore_fpsimd_from_stack
 	restore_volatile_from_stack
 	eret
 .endm
@@ -176,3 +176,80 @@ fiq_lower_32:
 .balign 0x80
 serr_lower_32:
 	current_exception_spx serr_lower
+
+.section .text.exceptions_util, "ax"
+
+/**
+ * Saves elr_el1 and spsr_el1 to the stack.
+ */
+save_status_regs:
+	mrs x0, elr_el1
+	mrs x1, spsr_el1
+	stp x0, x1, [sp, #8 * 22]
+	ret
+
+/**
+ * Restores elr_el1 and spsr_el1 from the stack.
+ */
+restore_status_regs:
+	ldp x0, x1, [sp, #8 * 22]
+	msr elr_el1, x0
+	msr spsr_el1, x1
+	ret
+
+/**
+ * Saves FPSR, FPCR and SIMD registers (v0-v31) to the stack.
+ */
+save_fpsimd_to_stack:
+	/* Save fpsr and fpcr. */
+	mrs x9, fpsr
+	mrs x10, fpcr
+	stp x9, x10, [sp, #-16]!
+
+	/* Save SIMD registers v0-v31 */
+	stp q0, q1, [sp, #-512]!
+	stp q2, q3, [sp, #32 * 1]
+	stp q4, q5, [sp, #32 * 2]
+	stp q6, q7, [sp, #32 * 3]
+	stp q8, q9, [sp, #32 * 4]
+	stp q10, q11, [sp, #32 * 5]
+	stp q12, q13, [sp, #32 * 6]
+	stp q14, q15, [sp, #32 * 7]
+	stp q16, q17, [sp, #32 * 8]
+	stp q18, q19, [sp, #32 * 9]
+	stp q20, q21, [sp, #32 * 10]
+	stp q22, q23, [sp, #32 * 11]
+	stp q24, q25, [sp, #32 * 12]
+	stp q26, q27, [sp, #32 * 13]
+	stp q28, q29, [sp, #32 * 14]
+	stp q30, q31, [sp, #32 * 15]
+	ret
+
+/**
+ * Restores FPSR, FPCR and SIMD registers (v0-v31) from the stack.
+ */
+restore_fpsimd_from_stack:
+	/* Restore SIMD registers v0-v31 */
+	ldp q0, q1, [sp, #32 * 0]
+	ldp q2, q3, [sp, #32 * 1]
+	ldp q4, q5, [sp, #32 * 2]
+	ldp q6, q7, [sp, #32 * 3]
+	ldp q8, q9, [sp, #32 * 4]
+	ldp q10, q11, [sp, #32 * 5]
+	ldp q12, q13, [sp, #32 * 6]
+	ldp q14, q15, [sp, #32 * 7]
+	ldp q16, q17, [sp, #32 * 8]
+	ldp q18, q19, [sp, #32 * 9]
+	ldp q20, q21, [sp, #32 * 10]
+	ldp q22, q23, [sp, #32 * 11]
+	ldp q24, q25, [sp, #32 * 12]
+	ldp q26, q27, [sp, #32 * 13]
+	ldp q28, q29, [sp, #32 * 14]
+	ldp q30, q31, [sp, #32 * 15]
+	add sp, sp, #512
+
+	/* Restore fpsr & fpcr, using x9 & x10 as scratch */
+	ldp x9, x10, [sp], #16
+	msr fpsr, x9
+	msr fpcr, x10
+	ret
