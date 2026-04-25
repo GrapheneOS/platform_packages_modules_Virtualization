@@ -162,6 +162,9 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
         }
     }
 
+    // This method must always return in bounded time.
+    // Payload-start failure (e.g. due to insufficient RAM) is expected
+    // and must be reported via Optional.empty(), not by blocking or retrying
     private OptionalLong canBootMicrodroidWithMemory(int mem)
             throws VirtualMachineException, InterruptedException, IOException {
         VirtualMachineConfig normalConfig =
@@ -170,19 +173,21 @@ public class MicrodroidBenchmarks extends MicrodroidDeviceTestBase {
                         .setMemoryBytes(mem * ONE_MEBI)
                         .setShouldUseHugepages(true)
                         .build();
+        // Create a fresh VM for this attempt
+        forceCreateNewVirtualMachine("test_vm_minimum_memory", normalConfig);
+        VirtualMachine vm = getVirtualMachineManager().get("test_vm_minimum_memory");
+        MemoryUsageListener listener = new MemoryUsageListener(this::executeCommand);
+        BenchmarkVmListener vmListener = BenchmarkVmListener.create(listener);
 
-        // returns true if succeeded at least once.
-        final int trialCount = 5;
-        for (int i = 0; i < trialCount; i++) {
-            forceCreateNewVirtualMachine("test_vm_minimum_memory", normalConfig);
-            VirtualMachine vm = getVirtualMachineManager().get("test_vm_minimum_memory");
-            MemoryUsageListener listener = new MemoryUsageListener(this::executeCommand);
-            if (BenchmarkVmListener.create(listener).tryRunToFinish(TAG, vm)
-                    && listener.mCrosvm != null) {
-                return OptionalLong.of(listener.mCrosvm.mGuestRss / 1024);
-            }
+        // IMPORTANT:
+        // - true  -> payload successfully started
+        // - false -> payload did not start (expected for low RAM)
+        boolean finished = vmListener.tryRunToFinish(TAG, vm);
+
+        if (finished && listener.mCrosvm != null) {
+            // Success case: payload started, RSS is valid
+            return OptionalLong.of(listener.mCrosvm.mGuestRss / 1024);
         }
-
         return OptionalLong.empty();
     }
 
