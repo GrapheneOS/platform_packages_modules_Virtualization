@@ -584,6 +584,10 @@ avb_add_hash_footer {
     filename: "microdroid_kernel_16k",
     arch: {
         arm64: {
+            enabled: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
+                "android17_618": false,
+                default: true,
+            }),
             src: ":microdroid_kernel_16k_prebuilt-arm64",
         },
         // There is no 16k x86_64 kernel. Instead the 16k emulation is triggered by adding
@@ -610,6 +614,10 @@ prebuilt_etc {
     relative_install_path: "fs",
     arch: {
         arm64: {
+            enabled: select(release_flag("RELEASE_AVF_MICRODROID_KERNEL_VERSION"), {
+                "android17_618": false,
+                default: true,
+            }),
             src: ":microdroid_kernel_16k_signed",
         },
         x86_64: {
