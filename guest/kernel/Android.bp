@@ -33,6 +33,7 @@ filegroup {
         "android15_66": ["android15-6.6/arm64/kernel-6.6"],
         "android15_66_desktop": ["android15-6.6/arm64/kernel-6.6"],
         "android16_612": ["android16-6.12/arm64/kernel-6.12"],
+        "android17_618": ["android17-6.18/arm64/kernel-6.18"],
         default: [],
     }),
 }
@@ -44,6 +45,7 @@ filegroup {
         "android15_66": ["android15-6.6/x86_64/kernel-6.6"],
         "android15_66_desktop": ["android15-6.6/x86_64-desktop/kernel-6.6-desktop"],
         "android16_612": ["android16-6.12/x86_64/kernel-6.12"],
+        "android17_618": ["android17-6.18/x86_64/kernel-6.18"],
         default: [],
     }),
 }
