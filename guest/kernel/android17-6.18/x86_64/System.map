@@ -74349,9 +74349,9 @@ ffffffff81e2a8e8 D kallsyms_token_index
 ffffffff81e2aae8 D kallsyms_offsets
 ffffffff81e73dc8 D kallsyms_relative_base
 ffffffff81e73dd0 D kallsyms_seqs_of_names
-ffffffff81ec7172 d task_index_to_char.state_char
-ffffffff81ec7172 d task_index_to_char.state_char
-ffffffff81ec7172 d task_index_to_char.state_char
+ffffffff81ec7150 d task_index_to_char.state_char
+ffffffff81ec7150 d task_index_to_char.state_char
+ffffffff81ec7150 d task_index_to_char.state_char
 ffffffff81f11ac5 d trunc_msg
 ffffffff81f14643 d k_cur.cur_chars
 ffffffff81f3df80 d pirq_finali_get.irqmap
