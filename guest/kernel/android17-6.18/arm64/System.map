@@ -31842,11 +31842,11 @@ ffff8000808d6e80 D kallsyms_token_index
 ffff8000808d7080 D kallsyms_offsets
 ffff8000808f5278 D kallsyms_relative_base
 ffff8000808f5280 D kallsyms_seqs_of_names
-ffff8000809181f1 d k_pad.pad_chars
-ffff8000809207af d task_index_to_char.state_char
-ffff8000809207af d task_index_to_char.state_char
-ffff8000809207af d task_index_to_char.state_char
-ffff80008092c80a d k_pad.app_map
+ffff8000809181cf d k_pad.pad_chars
+ffff80008092078d d task_index_to_char.state_char
+ffff80008092078d d task_index_to_char.state_char
+ffff80008092078d d task_index_to_char.state_char
+ffff80008092c7e8 d k_pad.app_map
 ffff800080956be5 d trunc_msg
 ffff800080958c5e d pty_line_name.ptychar
 ffff800080958cb3 d k_cur.cur_chars
