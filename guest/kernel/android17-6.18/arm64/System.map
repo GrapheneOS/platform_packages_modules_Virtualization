@@ -31801,7 +31801,7 @@ ffff800080917eca d k_pad.pad_chars
 ffff800080920488 d task_index_to_char.state_char
 ffff800080920488 d task_index_to_char.state_char
 ffff800080920488 d task_index_to_char.state_char
-ffff80008092c4ae d k_pad.app_map
+ffff80008092c4d0 d k_pad.app_map
 ffff8000809568b8 d trunc_msg
 ffff800080958931 d pty_line_name.ptychar
 ffff800080958986 d k_cur.cur_chars
